@@ -10,18 +10,19 @@
 #include "TSystem.h"
 #include "TROOT.h"
 #if not defined(__CINT__) || defined(__MAKECINT__)
-// needs to be included when makecint runs (ACLIC)
+#endif
 #include "TMVA/Factory.h"
 #include "TMVA/Tools.h"
-#endif
+#include "TInterpreter.h"
+#include "TMVAGui.C"
+#include "tmvaCuts.h"
+using tmvaCuts::PtBins;
+using tmvaCuts::totalNumberOfEvents;
 
-void TMVAClassification( TString myMethodList = "" ) {
-   float ptmin = 2;
-   float ptmax = 3;
-
+void TMVAClassification(float ptmin = 2, float ptmax = 3) {
    TMVA::Tools::Instance();
-
    // to get access to the GUI and all tmva macros
+   cout<<gInterpreter->GetCurrentMacroName()<<endl;
    TString thisdir = gSystem->DirName(gInterpreter->GetCurrentMacroName());
    gROOT->SetMacroPath(thisdir + ":" + gROOT->GetMacroPath());
    gROOT->ProcessLine(".L TMVAGui.C");
@@ -48,7 +49,7 @@ void TMVAClassification( TString myMethodList = "" ) {
    std::cout << "==> Start TMVAClassification" << std::endl;
 
    // Create a ROOT output file where TMVA will store ntuples, histograms, etc.
-   TString outfileName( "TMVA_Dpm_pt2.root" );
+   TString outfileName( Form("TMVA_bdt_d0_pt_%.1f_%.1f.root", ptmin, ptmax));
    TFile* outputFile = TFile::Open( outfileName, "RECREATE" );
    TMVA::Factory *factory = new TMVA::Factory( "TMVAClassification", outputFile, "!V:!Silent:Color:DrawProgressBar:Transformations=I;D;P;G,D:AnalysisType=Classification" );
 
@@ -84,14 +85,31 @@ void TMVAClassification( TString myMethodList = "" ) {
 
    int nEntriesSignalTree = signal->GetEntries();
    int const totalNumberOfEvents = 120e6;
-   TH1F*  hMcPt      = (TH1F*)inputSignal->Get("hMcPt");
-   int const nOriginalSignalEntries = hMcPt->Integral(hMcPt->FindBin(ptmin),hMcPt->FindBin(ptmax)); // Number of simulated D0/D0bar in this pT bin before efficiency
+   TH1F*  hMcPt = (TH1F*)inputSignal->Get("hMcPt");
+   TTree *signal_data = (TTree *) inputBackground->Get("ntp_signal");
+
+   int const nOriginalSignalEntriesMCPt = hMcPt->Integral(hMcPt->FindBin(ptmin),hMcPt->FindBin(ptmax)); // Number of simulated D0/D0bar in this pT bin before efficiency
+   int const nOriginalSignalEntries = nOriginalSignalEntriesMCPt; // Number of simulated D0/D0bar in this pT bin before efficiency
+
    TString signalWeightExpression = TString::Format("1*weight*((%f/%f)*0.8*2.*3.14*D_pt*2*(%f)*2.*exp(-1.45-1.73*D_pt)*0.0389)", (float)totalNumberOfEvents, (float)nOriginalSignalEntries, ptmax-ptmin);
    factory->SetSignalWeightExpression(signalWeightExpression);
+   TString backgroundWeightExpression = "1";
+
 
    // Apply additional cuts on the signal and background samples (can be different)
-   TCut mycuts = "D_pt<3 && D_pt>2 && k_pt>0.15 && pi1_pt>0.15 && k_dca>0.002 && pi1_dca>0.002 && cosTheta>0.5"; // for example: TCut mycuts = "abs(var1)<0.5 && abs(var2-0.5)<1";
-   TCut mycutb = mycuts; // for example: TCut mycutb = "abs(var1)<0.5";
+//   TCut mycuts = "D_pt<3 && D_pt>2 && k_pt>0.15 && pi1_pt>0.15 && k_dca>0.002 && pi1_dca>0.002 && cosTheta>0.5";
+
+   TCut mycuts = Form("D_mass > 1.75 && D_mass < 2 && D_pt>%1.2f && D_pt<%1.2f && k_pt>%1.2f && pi1_pt>%1.2f && "
+                       "D_decayL>%f && D_decayL<0.5 && "
+                       "dcaDaughters<%f && "
+                       "k_dca>%f && k_dca<0.5 && "
+                       "pi1_dca>%f && pi1_dca<0.5 && "
+                       "dcaD0ToPv<%f",
+                       ptmin, ptmax, tmvaCuts::minPt, tmvaCuts::minPt,
+                       tmvaCuts::decayLength, tmvaCuts::dcaDaughters,
+                       tmvaCuts::kDca, tmvaCuts::pDca,
+                       tmvaCuts::dcaV0ToPv);
+   TCut mycutb = mycuts;
 
    // Tell the factory how to use the training and testing events
    // If no numbers of events are given, half of the events in the tree are used
@@ -166,6 +184,34 @@ void TMVAClassification( TString myMethodList = "" ) {
    std::cout << "==> TMVAClassification is done!" << std::endl;
 
    delete factory;
+
+   // check input pt distribution and yield
+   TH1F *hPtSignal = new TH1F("hPtSignal", "hPtSignal", 100, 0, 10);
+   TH1F *hPtBackgroundSameSign = new TH1F("hPtBackgroundSameSign", "hPtBackgroundSameSign", 100, 0, 10);
+   TH1F *hPtBackgroundSideBand = new TH1F("hPtBackgroundSideBand", "hPtBackgroundSideBand", 100, 0, 10);
+   backgroundSameSign->Draw("D_pt>>hPtBackgroundSameSign", backgroundWeightExpression * mycuts, "e");
+   backgroundSideBand->Draw("D_pt>>hPtBackgroundSideBand", backgroundWeightExpression * mycuts, "e");
+   TH1F *hPtBackground = (TH1F *) hPtBackgroundSameSign->Clone("hPtBackground");
+   signal->Draw("D_pt>>hPtSignal", signalWeightExpression * mycuts, "e");
+   hPtBackground->Add(hPtBackgroundSideBand);
+
+   int nSignal = hPtSignal->GetEntries();
+   int nBackground = hPtBackground->GetEntries();
+   float const signalYield = hPtSignal->Integral();
+   float const backgroundYield = hPtBackground->Integral();
+
+   cout << "Nentries in hMcPt in the pT range: " << nOriginalSignalEntriesMCPt << endl;
+   cout << "Nentries in data signal: " << signal_data->GetEntries(mycuts) << endl;
+
+   cout << endl << "signal total sample yield for sign.: " << signalYield << endl;
+   cout << "background total sample yield for sign.: " << backgroundYield << endl << endl;
+
+   cout << "------------------------------------------------------------------\n";
+   cout << "Signal counts passed cuts: " << nSignal << "\n";
+   cout << "Background counts passed cuts: " << nBackground << endl;
+   cout << "Signal counts*weight passed cuts: " << signalYield << "\n";
+   cout << "Background counts*weight passed cuts: " << backgroundYield << endl;
+   cout << "------------------------------------------------------------------\n";
 
    // Launch the GUI for the root macros
    if (!gROOT->IsBatch()) TMVAGui( outfileName );

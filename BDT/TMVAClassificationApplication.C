@@ -5,6 +5,8 @@
 #include <string>
 #include "TFile.h"
 #include "TTree.h"
+#include "TNtuple.h"
+#include "TChain.h"
 #include "TString.h"
 #include "TSystem.h"
 #include "TROOT.h"
@@ -19,7 +21,7 @@
 using namespace TMVA;
 
 void TMVAClassificationApplication( const char* inputF = "./files_to_run.list", TString output = "out_local.root", double ptmin = 2, double ptmax = 3) {
-    cout<<ptmin<<" "<<ptmax<<endl;
+        cout<<ptmin<<" "<<ptmax<<endl;
 
     //    TChain *theTree = new TChain("ntp","ntp");
 //    std::string line;
@@ -30,7 +32,6 @@ void TMVAClassificationApplication( const char* inputF = "./files_to_run.list", 
 //        lineS = line;
 //        theTree -> Add(lineS);
 //    }
-
     TString input = "/home/lukas/work/dmesons/Dmaker_dAu/res_analyse/ntp/ntp_lukas_1704.root";
     TFile* data = new TFile(input ,"r");
     TNtuple* ntp[2] = {(TNtuple*)data -> Get("ntp_signal"), (TNtuple*)data -> Get("ntp_background")};
@@ -115,7 +116,7 @@ void TMVAClassificationApplication( const char* inputF = "./files_to_run.list", 
 
     TStopwatch sw;
     sw.Start();
-    TNtuple* ntp_range[2] = {new TNtuple("Dpm_sig", "Dpm_sig", "flag:D_mass:D_pt:BDTresponse"), bkg_ntp_range = new TNtuple("Dpm_bkg", "Dpm_bkg", "flag:D_mass:D_pt:BDTresponse")};
+    TNtuple* ntp_range[2] = {new TNtuple("ntp_signal", "ntp_signal", "D_mass:D_pt:BDTresponse"), new TNtuple("ntp_background", "ntp_background", "D_mass:D_pt:BDTresponse")};
 
     float hodnoty[4] = {0};
     for (int i = 0; i < 2; ++i) {
@@ -129,19 +130,16 @@ void TMVAClassificationApplication( const char* inputF = "./files_to_run.list", 
         ntp[i]->SetBranchAddress("D_pt", &D_pt);
         ntp[i]->SetBranchAddress("cosTheta", &cosTheta);
 
+//        for (Long64_t ievt = 0; ievt < 10000; ievt++) {
         for (Long64_t ievt = 0; ievt < ntp[i]->GetEntries(); ievt++) {
-            if (ievt % 10000 == 0 && i == 0) std::cout << "--- ... Processing signal, event: " << ievt << std::endl;
-            if (ievt % 10000 == 0 && i == 1) std::cout << "--- ... Processing background, event: " << ievt << std::endl;
+            if (ievt % 100000 == 0 && i == 0) std::cout << "--- ... Processing signal, event: " << ievt << std::endl;
+            if (ievt % 100000 == 0 && i == 1) std::cout << "--- ... Processing background, event: " << ievt << std::endl;
             ntp[i]->GetEntry(ievt);
             if (D_pt < ptmax && D_pt > ptmin) {
                 if (Use["BDT"]) {
                     float valueMVA = reader->EvaluateMVA("BDT method");
                     histBdt->Fill(valueMVA);
-                    hodnoty[0] = flag;
-                    hodnoty[1] = D_mass;
-                    hodnoty[2] = D_pt;
-                    hodnoty[3] = valueMVA;
-                    ntp_range[i]->Fill(hodnoty);
+                    ntp_range[i]->Fill(D_mass, D_pt, valueMVA);
                 }
             }
         }
