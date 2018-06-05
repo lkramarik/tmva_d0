@@ -16,10 +16,13 @@
 #include "TInterpreter.h"
 #include "TMVAGui.C"
 #include "tmvaCuts.h"
+#include<fstream>
+using namespace std;
 using tmvaCuts::PtBins;
 using tmvaCuts::totalNumberOfEvents;
 
 void TMVAClassification(float ptmin = 2, float ptmax = 3) {
+    const char* inputF = "./../files_to_run.list";
    TMVA::Tools::Instance();
    // to get access to the GUI and all tmva macros
    cout<<gInterpreter->GetCurrentMacroName()<<endl;
@@ -60,20 +63,37 @@ void TMVAClassification(float ptmin = 2, float ptmax = 3) {
    factory->AddVariable("k_dca", "DCA (Kaon)" , 'F' );
    factory->AddVariable("pi1_dca","DCA (Pion1)" , 'F' );
    factory->AddVariable("dcaDaughters", "DCA_daughters" , 'F' );
-   factory->AddVariable("cosTheta","cos(#theta)" , 'F' );
-//   factory->AddVariable("D_decayL", "#lambda" , 'F' );
+//   factory->AddVariable("cosTheta","cos(#theta)" , 'F' );
+   factory->AddVariable("D_decayL", "#lambda" , 'F' );
    factory->AddVariable("dcaD0ToPv", "dcaD0ToPv" , 'F' );
 
    // You can add so-called "Spectator variables", which are not used in the MVA training,
    // but will appear in the final "TestTree" produced by TMVA. This TestTree will contain the
    // input variables, the response values of all trained MVAs, and the spectator variables
 
-   TFile *inputBackground = new TFile("/home/lukas/work/dmesons/Dmaker_dAu/res_analyse/ntp/ntp_lukas_1704.root");
-   TTree *backgroundSameSign = (TTree *) inputBackground->Get("ntp_background");
+    Double_t backgroundWeight = 1;
+
+//    TFile style, one file
+//   TFile *inputBackground = new TFile("/home/lukas/work/dmesons/Dmaker_dAu/res_analyse/ntp/ntp_lukas_1704.root");
+//   TTree *backgroundSameSign = (TTree *) inputBackground->Get("ntp_background");
+//   factory->AddBackgroundTree(backgroundSameSign, backgroundWeight);
+
+//   TChain style, more files
+    TChain *backgroundSameSign = new TChain("ntp_background","ntp_background");
+    std::string line;
+    std::ifstream infile(inputF);
+    TString lineS;
+    while (std::getline(infile, line)) {
+        cout<<line<<endl;
+        lineS = line;
+        backgroundSameSign -> Add(lineS);
+    }
+    factory->AddBackgroundTree(backgroundSameSign, backgroundWeight);
+
+
+
    TFile *inputBackgroundSide = new TFile("/home/lukas/work/tmva_d0/ntp_2401_sideband.root");
    TTree *backgroundSideBand = (TTree *) inputBackgroundSide->Get("ntp_sideband");
-   Double_t backgroundWeight = 1;
-   factory->AddBackgroundTree(backgroundSameSign, backgroundWeight);
    factory->AddBackgroundTree(backgroundSideBand, backgroundWeight);
 
    TFile *inputSignal = new TFile("/home/lukas/work/tmva_d0/sim/ntpTMVA_D0.toyMc.Large.root");
@@ -86,12 +106,13 @@ void TMVAClassification(float ptmin = 2, float ptmax = 3) {
    int nEntriesSignalTree = signal->GetEntries();
    int const totalNumberOfEvents = 120e6;
    TH1F*  hMcPt = (TH1F*)inputSignal->Get("hMcPt");
-   TTree *signal_data = (TTree *) inputBackground->Get("ntp_signal");
+//   TTree *signal_data = (TTree *) inputBackground->Get("ntp_signal");
 
    int const nOriginalSignalEntriesMCPt = hMcPt->Integral(hMcPt->FindBin(ptmin),hMcPt->FindBin(ptmax)); // Number of simulated D0/D0bar in this pT bin before efficiency
    int const nOriginalSignalEntries = nOriginalSignalEntriesMCPt; // Number of simulated D0/D0bar in this pT bin before efficiency
 
-   TString signalWeightExpression = TString::Format("1*weight*((%f/%f)*0.8*2.*3.14*D_pt*2*(%f)*2.*exp(-1.45-1.73*D_pt)*0.0389)", (float)totalNumberOfEvents, (float)nOriginalSignalEntries, ptmax-ptmin);
+//   TString signalWeightExpression = TString::Format("1*weight*((%f/%f)*0.8*2.*3.14*D_pt*2*(%f)*2.*exp(-1.45-1.73*D_pt)*0.0389)", (float)totalNumberOfEvents, (float)nOriginalSignalEntries, ptmax-ptmin);
+   TString signalWeightExpression = TString::Format("((%f/%f)*0.8*2.*3.14*D_pt*2*(%f)*2.*exp(-1.45-1.73*D_pt))", (float)totalNumberOfEvents, (float)nOriginalSignalEntries, ptmax-ptmin);
    factory->SetSignalWeightExpression(signalWeightExpression);
    TString backgroundWeightExpression = "1";
 
@@ -99,22 +120,38 @@ void TMVAClassification(float ptmin = 2, float ptmax = 3) {
    // Apply additional cuts on the signal and background samples (can be different)
 //   TCut mycuts = "D_pt<3 && D_pt>2 && k_pt>0.15 && pi1_pt>0.15 && k_dca>0.002 && pi1_dca>0.002 && cosTheta>0.5";
 
-   TCut mycuts = Form("D_mass > 1.75 && D_mass < 2 && D_pt>%1.2f && D_pt<%1.2f && k_pt>%1.2f && pi1_pt>%1.2f && "
-                       "D_decayL>%f && D_decayL<0.5 && "
+   TCut mycuts = Form("D_mass > 1. && D_mass < 3 && D_pt>%1.2f && D_pt<%1.2f && k_pt>%1.2f && pi1_pt>%1.2f && "
+                       "D_decayL>%f && D_decayL<0.2 && "
                        "dcaDaughters<%f && "
-                       "k_dca>%f && k_dca<0.5 && "
-                       "pi1_dca>%f && pi1_dca<0.5 && "
-                       "dcaD0ToPv<%f",
+                       "k_dca>%f && k_dca<0.2 && "
+                       "pi1_dca>%f && pi1_dca<0.2 && "
+                       "dcaD0ToPv<%f && "
+                       "cosTheta>%f",
                        ptmin, ptmax, tmvaCuts::minPt, tmvaCuts::minPt,
                        tmvaCuts::decayLength, tmvaCuts::dcaDaughters,
                        tmvaCuts::kDca, tmvaCuts::pDca,
-                       tmvaCuts::dcaV0ToPv);
+                       tmvaCuts::dcaV0ToPv,
+                       tmvaCuts::cosTheta);
+
    TCut mycutb = mycuts;
+
+   // check input pt distribution and yield
+   TH1F *hPtSignal = new TH1F("hPtSignal", "hPtSignal", 100, 0, 10);
+   TH1F *hPtBackgroundSameSign = new TH1F("hPtBackgroundSameSign", "hPtBackgroundSameSign", 100, 0, 10);
+//   TH1F *hPtBackgroundSideBand = new TH1F("hPtBackgroundSideBand", "hPtBackgroundSideBand", 100, 0, 10);
+   backgroundSameSign->Draw("D_pt>>hPtBackgroundSameSign", backgroundWeightExpression * mycuts, "e");
+//   backgroundSideBand->Draw("D_pt>>hPtBackgroundSideBand", backgroundWeightExpression * mycuts, "e");
+   TH1F *hPtBackground = (TH1F *) hPtBackgroundSameSign->Clone("hPtBackground");
+   signal->Draw("D_pt>>hPtSignal", signalWeightExpression * mycuts, "e");
+//   hPtBackground->Add(hPtBackgroundSideBand);
+
+
+
 
    // Tell the factory how to use the training and testing events
    // If no numbers of events are given, half of the events in the tree are used
    // for training, and the other half for testing:
-   factory->PrepareTrainingAndTestTree( mycuts, mycutb, "nTrain_Signal=0:nTrain_Background=0:SplitMode=Random:NormMode=NumEvents:!V" );
+   factory->PrepareTrainingAndTestTree( mycuts, mycutb, "nTrain_Signal=150000:nTrain_Background=150000:SplitMode=Random:NormMode=NumEvents:!V" );
 
    // ---- Book MVA methods
    // Please lookup the various method configuration options in the corresponding cxx files, eg:
@@ -149,7 +186,7 @@ void TMVAClassification(float ptmin = 2, float ptmax = 3) {
 
    if (Use["BDT"])  // Adaptive Boost
       factory->BookMethod( TMVA::Types::kBDT, "BDT",
-                           "!H:!V:NTrees=850:MinNodeSize=2.5%:MaxDepth=3:BoostType=AdaBoost:AdaBoostBeta=0.5:UseBaggedBoost:BaggedSampleFraction=0.5:SeparationType=GiniIndex:nCuts=20" );
+                           "!H:!V:NTrees=150:MinNodeSize=2.5%:MaxDepth=3:BoostType=AdaBoost:AdaBoostBeta=0.5:UseBaggedBoost:BaggedSampleFraction=0.5:SeparationType=GiniIndex:nCuts=20" );
 
    if (Use["BDTB"]) // Bagging
       factory->BookMethod( TMVA::Types::kBDT, "BDTB",
@@ -185,15 +222,7 @@ void TMVAClassification(float ptmin = 2, float ptmax = 3) {
 
    delete factory;
 
-   // check input pt distribution and yield
-   TH1F *hPtSignal = new TH1F("hPtSignal", "hPtSignal", 100, 0, 10);
-   TH1F *hPtBackgroundSameSign = new TH1F("hPtBackgroundSameSign", "hPtBackgroundSameSign", 100, 0, 10);
-   TH1F *hPtBackgroundSideBand = new TH1F("hPtBackgroundSideBand", "hPtBackgroundSideBand", 100, 0, 10);
-   backgroundSameSign->Draw("D_pt>>hPtBackgroundSameSign", backgroundWeightExpression * mycuts, "e");
-   backgroundSideBand->Draw("D_pt>>hPtBackgroundSideBand", backgroundWeightExpression * mycuts, "e");
-   TH1F *hPtBackground = (TH1F *) hPtBackgroundSameSign->Clone("hPtBackground");
-   signal->Draw("D_pt>>hPtSignal", signalWeightExpression * mycuts, "e");
-   hPtBackground->Add(hPtBackgroundSideBand);
+
 
    int nSignal = hPtSignal->GetEntries();
    int nBackground = hPtBackground->GetEntries();
@@ -201,7 +230,7 @@ void TMVAClassification(float ptmin = 2, float ptmax = 3) {
    float const backgroundYield = hPtBackground->Integral();
 
    cout << "Nentries in hMcPt in the pT range: " << nOriginalSignalEntriesMCPt << endl;
-   cout << "Nentries in data signal: " << signal_data->GetEntries(mycuts) << endl;
+//   cout << "Nentries in data signal: " << signal_data->GetEntries(mycuts) << endl;
 
    cout << endl << "signal total sample yield for sign.: " << signalYield << endl;
    cout << "background total sample yield for sign.: " << backgroundYield << endl << endl;

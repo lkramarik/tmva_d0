@@ -1,6 +1,6 @@
 #!/bin/bash
 ptmin=2
-ptmax=3
+ptmax=5
 
 folderPt=pt_${ptmin}_$ptmax
 mkdir -p $folderPt
@@ -13,5 +13,6 @@ cp -i ../tmvaCuts.h ./
 cp -n ../TMVAGui.C ./
 cp -n ../tmvaglob.C ./
 
+#root -l TMVAClassification.C++\($ptmin,$ptmax\)
 root -l -q TMVAClassification.C++\($ptmin,$ptmax\)
-root -l TMVAClassificationApplication.C++\(\"nic\", \"out_local.root\",$ptmin,$ptmax\)
+root -l TMVAClassificationApplication.C++\(\"./../files_to_run.list\", \"out_local.root\",$ptmin,$ptmax\)

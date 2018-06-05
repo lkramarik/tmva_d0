@@ -13,28 +13,33 @@
 #include "TStopwatch.h"
 #include <math.h>
 #if not defined(__CINT__) || defined(__MAKECINT__)
+#endif
 #include "TMVA/Tools.h"
 #include "TMVA/Reader.h"
 #include "TMVA/MethodCuts.h"
-#endif
+#include "tmvaCuts.h"
 
 using namespace TMVA;
 
-void TMVAClassificationApplication( const char* inputF = "./files_to_run.list", TString output = "out_local.root", double ptmin = 2, double ptmax = 3) {
+void TMVAClassificationApplication( const char* inputF = "./../files_to_run.list", TString output = "out_local.root", double ptmin = 2, double ptmax = 3) {
         cout<<ptmin<<" "<<ptmax<<endl;
 
-    //    TChain *theTree = new TChain("ntp","ntp");
-//    std::string line;
-//    std::ifstream infile(inputF);
-//    TString lineS;
-//    while (std::getline(infile, line)) {
-//        cout<<line<<endl;
-//        lineS = line;
+        TChain *ntp[2] = {new TChain("ntp_signal","ntp_signal"), new TChain("ntp_background","ntp_background")};
+    std::string line;
+    std::ifstream infile(inputF);
+    TString lineS;
+    while (std::getline(infile, line)) {
+        cout<<line<<endl;
+        lineS = line;
 //        theTree -> Add(lineS);
-//    }
-    TString input = "/home/lukas/work/dmesons/Dmaker_dAu/res_analyse/ntp/ntp_lukas_1704.root";
-    TFile* data = new TFile(input ,"r");
-    TNtuple* ntp[2] = {(TNtuple*)data -> Get("ntp_signal"), (TNtuple*)data -> Get("ntp_background")};
+        ntp[0] -> Add(lineS);
+        ntp[1] -> Add(lineS);
+    }
+
+//    TString input = "/home/lukas/work/dmesons/Dmaker_dAu/res_analyse/ntp/ntp_lukas_1704.root";
+//    TFile* data = new TFile(input ,"r");
+//    TNtuple* ntp[2] = {(TNtuple*)data -> Get("ntp_signal"), (TNtuple*)data -> Get("ntp_background")};
+
     TFile* Dplus_file = new TFile (output, "RECREATE");
 
     #ifdef __CINT__
@@ -85,8 +90,8 @@ void TMVAClassificationApplication( const char* inputF = "./files_to_run.list", 
     reader->AddVariable("k_dca", &k_dca );
     reader->AddVariable("pi1_dca", &pi1_dca );
     reader->AddVariable("dcaDaughters", &dcaDaughters );
-    reader->AddVariable("cosTheta", &cosTheta  ); //in pico theta only, this just reads weight files
-//    reader->AddVariable("D_decayL", &D_decayL );
+//    reader->AddVariable("cosTheta", &cosTheta  ); //in pico theta only, this just reads weight files
+    reader->AddVariable("D_decayL", &D_decayL );
     reader->AddVariable("dcaD0ToPv", &dcaD0ToPv );
 
     TString dir    = "weights/";
@@ -103,7 +108,7 @@ void TMVAClassificationApplication( const char* inputF = "./files_to_run.list", 
 
     UInt_t nbin = 100;
     TH1F *histBdt(0);
-    if (Use["BDT"]) histBdt = new TH1F("MVA_BDT","MVA_BDT", nbin, -0.8, 0.8 );
+    if (Use["BDT"]) histBdt = new TH1F("MVA_BDT","MVA_BDT", nbin, -1, 1 );
 //    if (Use["BDTD"]) histBdtD = new TH1F("MVA_BDTD","MVA_BDTD", nbin, -0.8, 0.8 );
 //    if (Use["BDTG"]) histBdtG = new TH1F("MVA_BDTG","MVA_BDTG", nbin, -1.0, 1.0 );
 
@@ -116,7 +121,7 @@ void TMVAClassificationApplication( const char* inputF = "./files_to_run.list", 
 
     TStopwatch sw;
     sw.Start();
-    TNtuple* ntp_range[2] = {new TNtuple("ntp_signal", "ntp_signal", "D_mass:D_pt:BDTresponse"), new TNtuple("ntp_background", "ntp_background", "D_mass:D_pt:BDTresponse")};
+    TNtuple* ntp_range[2] = {new TNtuple("ntp_signal", "ntp_signal", "D_mass:D_pt:BDTresponse:dcaD0ToPv:dcaDaughters"), new TNtuple("ntp_background", "ntp_background", "D_mass:D_pt:BDTresponse:dcaD0ToPv:dcaDaughters")};
 
     float hodnoty[4] = {0};
     for (int i = 0; i < 2; ++i) {
@@ -128,7 +133,9 @@ void TMVAClassificationApplication( const char* inputF = "./files_to_run.list", 
         ntp[i]->SetBranchAddress("D_decayL", &D_decayL);
         ntp[i]->SetBranchAddress("D_mass", &D_mass);
         ntp[i]->SetBranchAddress("D_pt", &D_pt);
+        ntp[i]->SetBranchAddress("dcaD0ToPv", &dcaD0ToPv);
         ntp[i]->SetBranchAddress("cosTheta", &cosTheta);
+        ntp[i]->SetBranchAddress("dcaDaughters", &dcaDaughters);
 
 //        for (Long64_t ievt = 0; ievt < 10000; ievt++) {
         for (Long64_t ievt = 0; ievt < ntp[i]->GetEntries(); ievt++) {
@@ -136,10 +143,19 @@ void TMVAClassificationApplication( const char* inputF = "./files_to_run.list", 
             if (ievt % 100000 == 0 && i == 1) std::cout << "--- ... Processing background, event: " << ievt << std::endl;
             ntp[i]->GetEntry(ievt);
             if (D_pt < ptmax && D_pt > ptmin) {
-                if (Use["BDT"]) {
-                    float valueMVA = reader->EvaluateMVA("BDT method");
-                    histBdt->Fill(valueMVA);
-                    ntp_range[i]->Fill(D_mass, D_pt, valueMVA);
+                if  (k_pt>tmvaCuts::minPt && pi1_pt>tmvaCuts::minPt &&
+                     D_decayL>tmvaCuts::decayLength && D_decayL<0.2 &&
+                     dcaDaughters<tmvaCuts::dcaDaughters &&
+                     k_dca>tmvaCuts::kDca && k_dca<0.2 &&
+                     pi1_dca>tmvaCuts::pDca && pi1_dca<0.2 &&
+                     dcaD0ToPv < tmvaCuts::dcaV0ToPv &&
+                     cosTheta > tmvaCuts::cosTheta) {
+
+                    if (Use["BDT"]) {
+                        float valueMVA = reader->EvaluateMVA("BDT method");
+                        histBdt->Fill(valueMVA);
+                        ntp_range[i]->Fill(D_mass, D_pt, valueMVA, dcaD0ToPv, dcaDaughters);
+                    }
                 }
             }
         }
