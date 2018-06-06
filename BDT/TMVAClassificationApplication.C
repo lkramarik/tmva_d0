@@ -21,10 +21,10 @@
 
 using namespace TMVA;
 
-void TMVAClassificationApplication( const char* inputF = "./../files_to_run.list", TString output = "out_local.root", double ptmin = 2, double ptmax = 3) {
-        cout<<ptmin<<" "<<ptmax<<endl;
+void TMVAClassificationApplication( const char* inputF = "./../files_to_run.list", TString output = "out_local.root", float ptmin = 2, float ptmax = 3) {
+    cout<<ptmin<<" "<<ptmax<<endl;
 
-        TChain *ntp[2] = {new TChain("ntp_signal","ntp_signal"), new TChain("ntp_background","ntp_background")};
+    TChain *ntp[2] = {new TChain("ntp_signal","ntp_signal"), new TChain("ntp_background","ntp_background")};
     std::string line;
     std::ifstream infile(inputF);
     TString lineS;

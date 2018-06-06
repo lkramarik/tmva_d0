@@ -22,6 +22,7 @@ using tmvaCuts::PtBins;
 using tmvaCuts::totalNumberOfEvents;
 
 void TMVAClassification(float ptmin = 2, float ptmax = 3) {
+    cout<<ptmin<<" "<<ptmax<<endl;
     const char* inputF = "./../files_to_run.list";
    TMVA::Tools::Instance();
    // to get access to the GUI and all tmva macros
@@ -151,7 +152,8 @@ void TMVAClassification(float ptmin = 2, float ptmax = 3) {
    // Tell the factory how to use the training and testing events
    // If no numbers of events are given, half of the events in the tree are used
    // for training, and the other half for testing:
-   factory->PrepareTrainingAndTestTree( mycuts, mycutb, "nTrain_Signal=150000:nTrain_Background=150000:SplitMode=Random:NormMode=NumEvents:!V" );
+//   factory->PrepareTrainingAndTestTree( mycuts, mycutb, "nTrain_Signal=150000:nTrain_Background=150000:SplitMode=Random:NormMode=NumEvents:!V" );
+   factory->PrepareTrainingAndTestTree( mycuts, mycutb, "nTrain_Signal=100000:nTrain_Background=20000:SplitMode=Random:NormMode=NumEvents:!V" );
 
    // ---- Book MVA methods
    // Please lookup the various method configuration options in the corresponding cxx files, eg:
