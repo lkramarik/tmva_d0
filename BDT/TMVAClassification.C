@@ -23,6 +23,7 @@ using tmvaCuts::totalNumberOfEvents;
 
 void TMVAClassification(float ptmin = 2, float ptmax = 3) {
    TString inputSignalStr = "/home/lukas/work/tmva_d0/sim/ntpTMVA_D0.toyMc.Large.root";
+   TString inputSignalStr = "/gpfs01/star/pwg/lkramarik/tmva_d0/sim/ntpTMVA_D0.toyMc.Large.root";
     cout<<ptmin<<" "<<ptmax<<endl;
     const char* inputF = "./../files_to_run.list";
    TMVA::Tools::Instance();
