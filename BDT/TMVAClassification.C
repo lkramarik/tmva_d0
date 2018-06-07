@@ -22,6 +22,7 @@ using tmvaCuts::PtBins;
 using tmvaCuts::totalNumberOfEvents;
 
 void TMVAClassification(float ptmin = 2, float ptmax = 3) {
+   TString inputSignalStr = "/home/lukas/work/tmva_d0/sim/ntpTMVA_D0.toyMc.Large.root";
     cout<<ptmin<<" "<<ptmax<<endl;
     const char* inputF = "./../files_to_run.list";
    TMVA::Tools::Instance();
@@ -93,11 +94,11 @@ void TMVAClassification(float ptmin = 2, float ptmax = 3) {
 
 
 
-   TFile *inputBackgroundSide = new TFile("/home/lukas/work/tmva_d0/ntp_2401_sideband.root");
-   TTree *backgroundSideBand = (TTree *) inputBackgroundSide->Get("ntp_sideband");
-   factory->AddBackgroundTree(backgroundSideBand, backgroundWeight);
+//   TFile *inputBackgroundSide = new TFile("/home/lukas/work/tmva_d0/ntp_2401_sideband.root");
+//   TTree *backgroundSideBand = (TTree *) inputBackgroundSide->Get("ntp_sideband");
+//   factory->AddBackgroundTree(backgroundSideBand, backgroundWeight);
 
-   TFile *inputSignal = new TFile("/home/lukas/work/tmva_d0/sim/ntpTMVA_D0.toyMc.Large.root");
+   TFile *inputSignal = new TFile(inputSignalStr);
 //    TFile *inputSignal = new TFile("/home/lukas/work/tmva_d0/sim/ntpTMVA_D0.toyMc.root");
    TTree *signal = (TTree *) inputSignal->Get("ntp_signal");
    std::cout << "--- TMVA D0       : Using input signal file: " << inputSignal->GetName() << std::endl;
