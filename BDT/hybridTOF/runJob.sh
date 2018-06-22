@@ -7,19 +7,19 @@ productionId=`date +%F_%H-%M`
 echo ${productionId}
 mkdir -p pt_${ptmin}_${ptmax}/workDir
 mkdir -p pt_${ptmin}_${ptmax}/workDir/${productionId}
-cp /gpfs01/star/pwg/lkramarik/tmva_d0/BDT/files_to_run.list   pt_${ptmin}_${ptmax}/workDir/${productionId}
+cp /gpfs01/star/pwg/lkramarik/tmva_d0/BDT/hybridTOF/files_to_run.list   pt_${ptmin}_${ptmax}/workDir/${productionId}
 list="files_to_run.list"
 
-cp -r /gpfs01/star/pwg/lkramarik/tmva_d0/BDT/TMVAClassificationApplication.C  pt_${ptmin}_${ptmax}/workDir/${productionId}/
-cp -r /gpfs01/star/pwg/lkramarik/tmva_d0/BDT/tmvaCuts.h pt_${ptmin}_${ptmax}/workDir/${productionId}/
-cp -r /gpfs01/star/pwg/lkramarik/tmva_d0/BDT/pt_${ptmin}_${ptmax}/weights  pt_${ptmin}_${ptmax}/workDir/${productionId}
-cp -r /gpfs01/star/pwg/lkramarik/tmva_d0/BDT/submit   pt_${ptmin}_${ptmax}/workDir/${productionId}
+cp -r /gpfs01/star/pwg/lkramarik/tmva_d0/BDT/hybridTOF/TMVAClassificationApplication.C  pt_${ptmin}_${ptmax}/workDir/${productionId}/
+cp -r /gpfs01/star/pwg/lkramarik/tmva_d0/BDT/hybridTOF/tmvaCuts.h pt_${ptmin}_${ptmax}/workDir/${productionId}/
+cp -r /gpfs01/star/pwg/lkramarik/tmva_d0/BDT/hybridTOF/pt_${ptmin}_${ptmax}/weights  pt_${ptmin}_${ptmax}/workDir/${productionId}
+cp -r /gpfs01/star/pwg/lkramarik/tmva_d0/BDT/hybridTOF/submit   pt_${ptmin}_${ptmax}/workDir/${productionId}
 
 
 path=`pwd -P`
 path=$( echo $path | sed 's|//|/|g' )
 
-baseFolder="/gpfs01/star/pwg/lkramarik/tmva_d0/BDT/pt_"${ptmin}"_"${ptmax}"/workDir/"
+baseFolder="/gpfs01/star/pwg/lkramarik/tmva_d0/BDT/hybridTOF/pt_"${ptmin}"_"${ptmax}"/workDir/"
 echo ${baseFolder}
 
 cd pt_${ptmin}_${ptmax}/workDir/${productionId}
