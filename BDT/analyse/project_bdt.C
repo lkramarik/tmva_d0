@@ -16,10 +16,21 @@ void project_bdt(Double_t ptmin = 2, Double_t ptmax = 3) {
     gROOT->LoadMacro("fitting.C++");
 
     TFile *f = new TFile(Form("D0_bdt_cuts_pt_%.1f_%.1f.root", ptmin, ptmax),"RECREATE");
-    TString input = Form("../out_local.root", ptmin, ptmax);
+//    TString input = Form("../out_local.root", ptmin, ptmax);
+    TString input = "../out_local.root";
 
-    const int n_bin = 21;
-    float bdtRange[] = {0., 0.025, 0.03, 0.05, 0.06, 0.075, 0.08, 0.09, 0.1, 0.115, 0.125, 0.135, 0.15, 0.175, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5};
+    const int nBdt = 50;
+    const int n_bin = nBdt;
+    double minBdt = -0.5;
+    double maxBdt = 0.75;
+    float bdtRange[nBdt];
+
+    double BinBdt = (maxBdt+abs(minBdt))/double(nBdt);
+    cout<<BinBdt<<endl;
+
+    for (int m = 0; m < nBdt; ++m) {
+        bdtRange[m] = minBdt + m*BinBdt;
+    }
 
     TH1F *his[n_bin][2];
     TString name[2] = {"signal", "background"};
@@ -82,7 +93,7 @@ void project_bdt(Double_t ptmin = 2, Double_t ptmax = 3) {
     f -> Close();
 
 
-    gStyle->SetMarkerStyle(2);
+    gStyle->SetMarkerStyle(34);
     gStyle->SetOptFit(1);
     gStyle->SetStatY(0.899);
     gStyle->SetStatX(0.9);
@@ -98,7 +109,7 @@ void project_bdt(Double_t ptmin = 2, Double_t ptmax = 3) {
     gr->GetYaxis()->SetTitle("Significance");
     gr->GetYaxis()->SetTitleOffset(1.1);
     gr->GetXaxis()->SetTitle("BDT cut");
-    gr->SetMarkerSize(2);
+    gr->SetMarkerSize(2.5);
 //    TGraphErrors* gr = new TGraph(n_bin, x, y);
     gr -> Draw("ap");
     TLatex txR;
@@ -116,7 +127,7 @@ void project_bdt(Double_t ptmin = 2, Double_t ptmax = 3) {
 
     TCanvas *cStat = new TCanvas("cStat","cStat",1200,900);
     TGraph* grStat = new TGraph(n_bin, x, stat);
-    grStat -> SetMarkerColor(9);
+    grStat -> SetMarkerColor(46);
     grStat->SetTitle("");
     grStat->GetXaxis()->SetLabelSize(0.04);
     grStat->GetYaxis()->SetLabelSize(0.04);
@@ -125,7 +136,7 @@ void project_bdt(Double_t ptmin = 2, Double_t ptmax = 3) {
     grStat->GetYaxis()->SetTitle("Statistics (1.7 - 2.0 GeV/c^{2})");
     grStat->GetYaxis()->SetTitleOffset(1.1);
     grStat->GetXaxis()->SetTitle("BDT cut");
-    grStat->SetMarkerSize(2);
+    grStat->SetMarkerSize(2.5);
 //    TGraphErrors* gr = new TGraph(n_bin, x, y);
     grStat -> Draw("ap");
     text1 -> Draw("same");

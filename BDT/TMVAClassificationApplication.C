@@ -90,7 +90,7 @@ void TMVAClassificationApplication( const char* inputF = "./../files_to_run.list
     reader->AddVariable("k_dca", &k_dca );
     reader->AddVariable("pi1_dca", &pi1_dca );
     reader->AddVariable("dcaDaughters", &dcaDaughters );
-//    reader->AddVariable("cosTheta", &cosTheta  ); //in pico theta only, this just reads weight files
+    reader->AddVariable("cosTheta", &cosTheta  );
     reader->AddVariable("D_decayL", &D_decayL );
     reader->AddVariable("dcaD0ToPv", &dcaD0ToPv );
 

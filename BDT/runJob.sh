@@ -10,6 +10,7 @@ mkdir -p workDir/${productionId}
 cp /gpfs01/star/pwg/lkramarik/tmva_pm/files_to_run.list   pt_${ptmin}_${ptmax}/workDir/${productionId}
 list="files_to_run.list"
 
+cp -r /gpfs01/star/pwg/lkramarik/tmva_d0/BDT/tmvaCuts.h  pt_${ptmin}_${ptmax}/workDir/${productionId}
 cp -r /gpfs01/star/pwg/lkramarik/tmva_d0/BDT/TMVAClassificationApplication.C  pt_${ptmin}_${ptmax}/workDir/${productionId}
 cp -r /gpfs01/star/pwg/lkramarik/tmva_d0/BDT/pt_${ptmin}_${ptmax}/weights  pt_${ptmin}_${ptmax}/workDir/${productionId}
 cp -r /gpfs01/star/pwg/lkramarik/tmva_pm/submit   pt_${ptmin}_${ptmax}/workDir/${productionId}

@@ -44,7 +44,7 @@ Double_t fit(TH1F* hInvMassSign, TH1F* hInvMassBack, Double_t ptminText, Double_
     TString intUpLow = "1.92";
     TString intUpUp = "2.2";
     const float rotwthmin = 1.84; // peak mean fitting range
-    const float rotwthmax = 1.89; //peak mean fitting range
+    const float rotwthmax = 1.88; //peak mean fitting range
 
     const float MKSize    = 1.;
 

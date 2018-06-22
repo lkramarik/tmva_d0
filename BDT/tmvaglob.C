@@ -39,9 +39,12 @@ namespace TMVAGlob {
                      kGaussDecorr,
                      kNumOfMethods };
 
-   static Int_t c_Canvas         = TColor::GetColor( "#f0f0f0" );
-   static Int_t c_FrameFill      = TColor::GetColor( "#fffffd" );
-   static Int_t c_TitleBox       = TColor::GetColor( "#5D6B7D" );
+//   static Int_t c_Canvas         = TColor::GetColor( "#f0f0f0" );
+   static Int_t c_Canvas         = TColor::GetColor( "#FFFFFF" );
+   static Int_t c_FrameFill      = TColor::GetColor( "#FFFFFF" );
+   static Int_t c_TitleBox       = TColor::GetColor( "#FFFFFF" );
+//   static Int_t c_TitleBox       = TColor::GetColor( "#5D6B7D" );
+//   static Int_t c_TitleBorder    = TColor::GetColor( "#FFFFFF" );
    static Int_t c_TitleBorder    = TColor::GetColor( "#7D8B9D" );
    static Int_t c_TitleText      = TColor::GetColor( "#FFFFFF" );
    static Int_t c_SignalLine     = TColor::GetColor( "#0000ee" );
@@ -158,8 +161,9 @@ namespace TMVAGlob {
       TMVAStyle->SetLineStyleString( 7, "[22 10 7 10]" );
 
       // the pretty color palette of old
-      TMVAStyle->SetPalette((UsePaperStyle ? 18 : 1),0);
+//      TMVAStyle->SetPalette((UsePaperStyle ? 18 : 1),0);
 
+      TMVAStyle->SetCanvasColor(c_Canvas);
       // use plain black on white colors
       TMVAStyle->SetFrameBorderMode(0);
       TMVAStyle->SetCanvasBorderMode(0);
@@ -167,7 +171,8 @@ namespace TMVAGlob {
       TMVAStyle->SetPadColor(0);
       TMVAStyle->SetFillStyle(0);
 
-      TMVAStyle->SetLegendBorderSize(0);
+//      TMVAStyle->SetLegendBorderSize(0);
+      TMVAStyle->SetLegendBorderSize(1);
 
       // title properties
       // TMVAStyle->SetTitleW(.4);
@@ -317,7 +322,7 @@ namespace TMVAGlob {
 
    void plot_logo( Float_t v_scale = 1.0, Float_t skew = 1.0 )
    {
-
+      return;
       TImage *img = findImage("tmva_logo.gif");
       if (!img) {
          cout << "+++ Could not open image tmva_logo.gif" << endl;

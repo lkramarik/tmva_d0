@@ -22,7 +22,9 @@ using tmvaCuts::PtBins;
 using tmvaCuts::totalNumberOfEvents;
 
 void TMVAClassification(float ptmin = 2, float ptmax = 3) {
-   TString inputSignalStr = "/home/lukas/work/tmva_d0/sim/ntpTMVA_D0.toyMc.Large.root";
+//   TString inputSignalStr = "/home/lukas/work/tmva_d0/sim/ntpTMVA_D0.toyMc.Large.root";
+//   TString inputSignalStr = "/home/lukas/work/tmva_d0/sim/ntpTMVA_D0.toyMc_veryLarge.root";
+   TString inputSignalStr = "/home/lukas/work/tmva_d0/sim/ntpTMVA_D0.toyMc_veryLarge_Dete.root";
 //   TString inputSignalStr = "/gpfs01/star/pwg/lkramarik/tmva_d0/sim/ntpTMVA_D0.toyMc.Large.root";
     cout<<ptmin<<" "<<ptmax<<endl;
     const char* inputF = "./../files_to_run.list";
@@ -63,12 +65,12 @@ void TMVAClassification(float ptmin = 2, float ptmax = 3) {
    // note that you may also use variable expressions, such as: "3*var1/var2*abs(var3)"
    // [all types of expressions that can also be parsed by TTree::Draw( "expression" )]
 
-   factory->AddVariable("k_dca", "DCA (Kaon)" , 'F' );
-   factory->AddVariable("pi1_dca","DCA (Pion1)" , 'F' );
-   factory->AddVariable("dcaDaughters", "DCA_daughters" , 'F' );
-//   factory->AddVariable("cosTheta","cos(#theta)" , 'F' );
-   factory->AddVariable("D_decayL", "#lambda" , 'F' );
-   factory->AddVariable("dcaD0ToPv", "dcaD0ToPv" , 'F' );
+   factory->AddVariable("k_dca", "DCA Kaon" , "cm", 'F' );
+   factory->AddVariable("pi1_dca","DCA Pion" , "cm", 'F' );
+   factory->AddVariable("dcaDaughters", "DCA daughters" ,"cm", 'F' );
+   factory->AddVariable("cosTheta","cos(#theta)" , 'F' );
+   factory->AddVariable("D_decayL", "decay length" ,"cm", 'F' );
+   factory->AddVariable("dcaD0ToPv", "DCA D^{0}" ,"cm", 'F' );
 
    // You can add so-called "Spectator variables", which are not used in the MVA training,
    // but will appear in the final "TestTree" produced by TMVA. This TestTree will contain the
@@ -95,9 +97,9 @@ void TMVAClassification(float ptmin = 2, float ptmax = 3) {
 
 
 
-//   TFile *inputBackgroundSide = new TFile("/home/lukas/work/tmva_d0/ntp_2401_sideband.root");
-//   TTree *backgroundSideBand = (TTree *) inputBackgroundSide->Get("ntp_sideband");
-//   factory->AddBackgroundTree(backgroundSideBand, backgroundWeight);
+   TFile *inputBackgroundSide = new TFile("/home/lukas/work/tmva_d0/ntp_2401_sideband.root");
+   TTree *backgroundSideBand = (TTree *) inputBackgroundSide->Get("ntp_sideband");
+   factory->AddBackgroundTree(backgroundSideBand, backgroundWeight);
 
    TFile *inputSignal = new TFile(inputSignalStr);
 //    TFile *inputSignal = new TFile("/home/lukas/work/tmva_d0/sim/ntpTMVA_D0.toyMc.root");
@@ -114,8 +116,8 @@ void TMVAClassification(float ptmin = 2, float ptmax = 3) {
    int const nOriginalSignalEntriesMCPt = hMcPt->Integral(hMcPt->FindBin(ptmin),hMcPt->FindBin(ptmax)); // Number of simulated D0/D0bar in this pT bin before efficiency
    int const nOriginalSignalEntries = nOriginalSignalEntriesMCPt; // Number of simulated D0/D0bar in this pT bin before efficiency
 
-//   TString signalWeightExpression = TString::Format("1*weight*((%f/%f)*0.8*2.*3.14*D_pt*2*(%f)*2.*exp(-1.45-1.73*D_pt)*0.0389)", (float)totalNumberOfEvents, (float)nOriginalSignalEntries, ptmax-ptmin);
-   TString signalWeightExpression = TString::Format("((%f/%f)*0.8*2.*3.14*D_pt*2*(%f)*2.*exp(-1.45-1.73*D_pt))", (float)totalNumberOfEvents, (float)nOriginalSignalEntries, ptmax-ptmin);
+   TString signalWeightExpression = TString::Format("1*weight*((%f/%f)*0.8*2.*3.14*D_pt*2*(%f)*2.*exp(-1.45-1.73*D_pt)*0.0389)", (float)totalNumberOfEvents, (float)nOriginalSignalEntries, ptmax-ptmin);
+//   TString signalWeightExpression = TString::Format("((%f/%f)*0.8*2.*3.14*D_pt*2*(%f)*2.*exp(-1.45-1.73*D_pt))", (float)totalNumberOfEvents, (float)nOriginalSignalEntries, ptmax-ptmin);
    factory->SetSignalWeightExpression(signalWeightExpression);
    TString backgroundWeightExpression = "1";
 
@@ -155,7 +157,7 @@ void TMVAClassification(float ptmin = 2, float ptmax = 3) {
    // If no numbers of events are given, half of the events in the tree are used
    // for training, and the other half for testing:
 //   factory->PrepareTrainingAndTestTree( mycuts, mycutb, "nTrain_Signal=150000:nTrain_Background=150000:SplitMode=Random:NormMode=NumEvents:!V" );
-   factory->PrepareTrainingAndTestTree( mycuts, mycutb, "nTrain_Signal=100000:nTrain_Background=20000:SplitMode=Random:NormMode=NumEvents:!V" );
+   factory->PrepareTrainingAndTestTree( mycuts, mycutb, "nTrain_Signal=60000:nTrain_Background=150000:SplitMode=Random:NormMode=NumEvents:!V" );
 
    // ---- Book MVA methods
    // Please lookup the various method configuration options in the corresponding cxx files, eg:
