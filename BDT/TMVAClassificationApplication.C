@@ -21,7 +21,7 @@
 
 using namespace TMVA;
 
-void TMVAClassificationApplication( const char* inputF = "./../files_to_run.list", TString output = "out_local.root", float ptmin = 2, float ptmax = 3) {
+void TMVAClassificationApplication( const char* inputF = "./../../files_to_run.list", TString output = "out_local.root", float ptmin = 2, float ptmax = 3) {
     cout<<ptmin<<" "<<ptmax<<endl;
 
     TChain *ntp[2] = {new TChain("ntp_signal","ntp_signal"), new TChain("ntp_background","ntp_background")};
@@ -41,10 +41,6 @@ void TMVAClassificationApplication( const char* inputF = "./../files_to_run.list
 //    TNtuple* ntp[2] = {(TNtuple*)data -> Get("ntp_signal"), (TNtuple*)data -> Get("ntp_background")};
 
     TFile* Dplus_file = new TFile (output, "RECREATE");
-
-    #ifdef __CINT__
-        gROOT->ProcessLine( ".O0" ); // turn off optimization in CINT
-    #endif
 
     TMVA::Tools::Instance();
     std::map<std::string,int> Use;
@@ -94,7 +90,8 @@ void TMVAClassificationApplication( const char* inputF = "./../files_to_run.list
     reader->AddVariable("D_decayL", &D_decayL );
     reader->AddVariable("dcaD0ToPv", &dcaD0ToPv );
 
-    TString dir    = "weights/";
+    TString dir    = "dataset/weights/";
+//    TString dir    = "weights/";
     TString prefix = "TMVAClassification";
 
     // Book method(s)
@@ -129,7 +126,7 @@ void TMVAClassificationApplication( const char* inputF = "./../files_to_run.list
         ntp[i]->SetBranchAddress("pi1_pt", &pi1_pt);
         ntp[i]->SetBranchAddress("k_dca", &k_dca);
         ntp[i]->SetBranchAddress("pi1_dca", &pi1_dca);
-        ntp[i]->SetBranchAddress("D_theta", &D_theta); //D_theta only in pico, no cos, need to copy in the event loop
+        ntp[i]->SetBranchAddress("D_theta", &D_theta);
         ntp[i]->SetBranchAddress("D_decayL", &D_decayL);
         ntp[i]->SetBranchAddress("D_mass", &D_mass);
         ntp[i]->SetBranchAddress("D_pt", &D_pt);
@@ -139,8 +136,8 @@ void TMVAClassificationApplication( const char* inputF = "./../files_to_run.list
 
 //        for (Long64_t ievt = 0; ievt < 10000; ievt++) {
         for (Long64_t ievt = 0; ievt < ntp[i]->GetEntries(); ievt++) {
-            if (ievt % 100000 == 0 && i == 0) std::cout << "--- ... Processing signal, event: " << ievt << std::endl;
-            if (ievt % 100000 == 0 && i == 1) std::cout << "--- ... Processing background, event: " << ievt << std::endl;
+            if (ievt % 1000000 == 0 && i == 0) std::cout << "--- ... Processing signal, event: " << ievt << std::endl;
+            if (ievt % 1000000 == 0 && i == 1) std::cout << "--- ... Processing background, event: " << ievt << std::endl;
             ntp[i]->GetEntry(ievt);
             if (D_pt < ptmax && D_pt > ptmin) {
                 if  (k_pt>tmvaCuts::minPt && pi1_pt>tmvaCuts::minPt &&

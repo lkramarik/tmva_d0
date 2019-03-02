@@ -21,11 +21,11 @@ using namespace std;
 using tmvaCuts::PtBins;
 using tmvaCuts::totalNumberOfEvents;
 
-void TMVAClassification(float ptmin = 2, float ptmax = 3) {
-   TString inputSignalStr = "/home/lukas/work/tmva_d0/sim/ntpTMVA_D0.toyMc.Large.root";
+void TMVAClassification(float ptmin = 3, float ptmax = 5) {
+   TString inputSignalStr = "/home/lukas/work/tmva_d0/sim/ntpTMVA_D0.toyMc.hybridTof.large.root";
 //   TString inputSignalStr = "/gpfs01/star/pwg/lkramarik/tmva_d0/sim/ntpTMVA_D0.toyMc.Large.root";
     cout<<ptmin<<" "<<ptmax<<endl;
-    const char* inputF = "./../files_to_run.list";
+    const char* inputF = "./../files_to_run_local.list";
    TMVA::Tools::Instance();
    // to get access to the GUI and all tmva macros
    cout<<gInterpreter->GetCurrentMacroName()<<endl;
@@ -63,12 +63,12 @@ void TMVAClassification(float ptmin = 2, float ptmax = 3) {
    // note that you may also use variable expressions, such as: "3*var1/var2*abs(var3)"
    // [all types of expressions that can also be parsed by TTree::Draw( "expression" )]
 
-   factory->AddVariable("k_dca", "DCA (Kaon)" , 'F' );
-   factory->AddVariable("pi1_dca","DCA (Pion1)" , 'F' );
-   factory->AddVariable("dcaDaughters", "DCA_daughters" , 'F' );
-//   factory->AddVariable("cosTheta","cos(#theta)" , 'F' );
-   factory->AddVariable("D_decayL", "#lambda" , 'F' );
-   factory->AddVariable("dcaD0ToPv", "dcaD0ToPv" , 'F' );
+   factory->AddVariable("k_dca", "DCA Kaon" , "cm", 'F' );
+   factory->AddVariable("pi1_dca","DCA Pion" , "cm", 'F' );
+   factory->AddVariable("dcaDaughters", "DCA daughters" ,"cm", 'F' );
+   factory->AddVariable("cosTheta","cos(#theta)" , "-", 'F' );
+   factory->AddVariable("D_decayL", "decay length" ,"cm", 'F' );
+   factory->AddVariable("dcaD0ToPv", "DCA D^{0}" ,"cm", 'F' );
 
    // You can add so-called "Spectator variables", which are not used in the MVA training,
    // but will appear in the final "TestTree" produced by TMVA. This TestTree will contain the
@@ -119,10 +119,6 @@ void TMVAClassification(float ptmin = 2, float ptmax = 3) {
    factory->SetSignalWeightExpression(signalWeightExpression);
    TString backgroundWeightExpression = "1";
 
-
-   // Apply additional cuts on the signal and background samples (can be different)
-//   TCut mycuts = "D_pt<3 && D_pt>2 && k_pt>0.15 && pi1_pt>0.15 && k_dca>0.002 && pi1_dca>0.002 && cosTheta>0.5";
-
    TCut mycuts = Form("D_mass > 1. && D_mass < 3 && D_pt>%1.2f && D_pt<%1.2f && k_pt>%1.2f && pi1_pt>%1.2f && "
                        "D_decayL>%f && D_decayL<0.2 && "
                        "dcaDaughters<%f && "
@@ -155,7 +151,7 @@ void TMVAClassification(float ptmin = 2, float ptmax = 3) {
    // If no numbers of events are given, half of the events in the tree are used
    // for training, and the other half for testing:
 //   factory->PrepareTrainingAndTestTree( mycuts, mycutb, "nTrain_Signal=150000:nTrain_Background=150000:SplitMode=Random:NormMode=NumEvents:!V" );
-   factory->PrepareTrainingAndTestTree( mycuts, mycutb, "nTrain_Signal=100000:nTrain_Background=20000:SplitMode=Random:NormMode=NumEvents:!V" );
+   factory->PrepareTrainingAndTestTree( mycuts, mycutb, "nTrain_Signal=150000:nTrain_Background=100000:SplitMode=Random:NormMode=NumEvents:!V" );
 
    // ---- Book MVA methods
    // Please lookup the various method configuration options in the corresponding cxx files, eg:
@@ -190,7 +186,7 @@ void TMVAClassification(float ptmin = 2, float ptmax = 3) {
 
    if (Use["BDT"])  // Adaptive Boost
       factory->BookMethod( TMVA::Types::kBDT, "BDT",
-                           "!H:!V:NTrees=150:MinNodeSize=2.5%:MaxDepth=3:BoostType=AdaBoost:AdaBoostBeta=0.5:UseBaggedBoost:BaggedSampleFraction=0.5:SeparationType=GiniIndex:nCuts=20" );
+                           "!H:!V:NTrees=250:MinNodeSize=2.5%:MaxDepth=3:BoostType=AdaBoost:AdaBoostBeta=0.5:UseBaggedBoost:BaggedSampleFraction=0.5:SeparationType=GiniIndex:nCuts=20" );
 
    if (Use["BDTB"]) // Bagging
       factory->BookMethod( TMVA::Types::kBDT, "BDTB",

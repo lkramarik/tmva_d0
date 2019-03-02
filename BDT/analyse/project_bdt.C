@@ -10,26 +10,26 @@
 #include <ctime>
 #include <cstdio>
 #include <fstream>
-#include <fitting.C>
+#include "fitting.C"
 
-void project_bdt(Double_t ptmin = 2, Double_t ptmax = 3) {
+void project_bdt(Double_t ptmin = 2, Double_t ptmax = 3, Double_t nTrees = 350, Double_t maxDepth = 4) {
     gROOT->LoadMacro("fitting.C++");
 
-    TFile *f = new TFile(Form("D0_bdt_cuts_pt_%.1f_%.1f.root", ptmin, ptmax),"RECREATE");
+    TFile *f = new TFile(Form("D0_bdt_cuts_pt_%.1f_%.1f_nTrees_%.1f_maxDepth_%.1f.root", ptmin, ptmax, nTrees ,maxDepth),"RECREATE");
 //    TString input = Form("../out_local.root", ptmin, ptmax);
     TString input = "../out_local.root";
 
     const int nBdt = 50;
     const int n_bin = nBdt;
-    double minBdt = -0.5;
+    double minBdt = 0.2;
     double maxBdt = 0.75;
     float bdtRange[nBdt];
 
-    double BinBdt = (maxBdt+abs(minBdt))/double(nBdt);
+    double BinBdt = (maxBdt-minBdt)/double(nBdt);
     cout<<BinBdt<<endl;
 
     for (int m = 0; m < nBdt; ++m) {
-        bdtRange[m] = minBdt + m*BinBdt;
+        bdtRange[m] = minBdt + double(m)*BinBdt;
     }
 
     TH1F *his[n_bin][2];
@@ -108,10 +108,15 @@ void project_bdt(Double_t ptmin = 2, Double_t ptmax = 3) {
     gr->GetYaxis()->SetTitleSize(0.045);
     gr->GetYaxis()->SetTitle("Significance");
     gr->GetYaxis()->SetTitleOffset(1.1);
-    gr->GetXaxis()->SetTitle("BDT cut");
+    gr->GetXaxis()->SetTitle("BDT response cut");
     gr->SetMarkerSize(2.5);
 //    TGraphErrors* gr = new TGraph(n_bin, x, y);
     gr -> Draw("ap");
+
+    TFile *fSign = new TFile(Form("significance_pt_%.1f_%.1f_nTrees_%.1f_maxDepth_%.1f.root", ptmin, ptmax, nTrees, maxDepth),"RECREATE");
+    gr -> Write(Form("gr_sign_pt_%.1f_%.1f_nTrees_%.1f_maxDepth_%.1f", ptmin, ptmax, nTrees, maxDepth));
+    fSign -> Close();
+
     TLatex txR;
     txR.SetNDC();
     txR.SetTextSize(0.04);
@@ -126,6 +131,7 @@ void project_bdt(Double_t ptmin = 2, Double_t ptmax = 3) {
     text1 -> Draw("same");
 
     TCanvas *cStat = new TCanvas("cStat","cStat",1200,900);
+    cStat -> SetLogy();
     TGraph* grStat = new TGraph(n_bin, x, stat);
     grStat -> SetMarkerColor(46);
     grStat->SetTitle("");
@@ -133,15 +139,13 @@ void project_bdt(Double_t ptmin = 2, Double_t ptmax = 3) {
     grStat->GetYaxis()->SetLabelSize(0.04);
     grStat->GetXaxis()->SetTitleSize(0.045);
     grStat->GetYaxis()->SetTitleSize(0.045);
-    grStat->GetYaxis()->SetTitle("Statistics (1.7 - 2.0 GeV/c^{2})");
+    grStat->GetYaxis()->SetTitle("# pairs with mass [1.7, 2.0] GeV/c^{2}");
     grStat->GetYaxis()->SetTitleOffset(1.1);
-    grStat->GetXaxis()->SetTitle("BDT cut");
+    grStat->GetXaxis()->SetTitle("BDT response cut");
     grStat->SetMarkerSize(2.5);
 //    TGraphErrors* gr = new TGraph(n_bin, x, y);
     grStat -> Draw("ap");
     text1 -> Draw("same");
     txR.DrawLatex(0.1,0.93,Form("p_{T}: %3.1f-%3.1f GeV/c", ptmin, ptmax));
-
-
 
 }
