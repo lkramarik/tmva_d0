@@ -11,17 +11,20 @@
 #include <cstdio>
 #include <fstream>
 #include "fitting.C"
+#include "FitD0Peak.hh"
 
 void project_bdt(Double_t ptmin = 2, Double_t ptmax = 3, Double_t nTrees = 350, Double_t maxDepth = 4) {
-    gROOT->LoadMacro("fitting.C++");
+//    gROOT->LoadMacro("fitting.C++");
+    bool mixed=false;
+    gROOT->ProcessLine(".L FitD0Peak.cpp++");
 
     TFile *f = new TFile(Form("D0_bdt_cuts_pt_%.1f_%.1f_nTrees_%.1f_maxDepth_%.1f.root", ptmin, ptmax, nTrees ,maxDepth),"RECREATE");
 //    TString input = Form("../out_local.root", ptmin, ptmax);
     TString input = "../out_local.root";
 
-    const int nBdt = 50;
+    const int nBdt = 70;
     const int n_bin = nBdt;
-    double minBdt = 0.2;
+    double minBdt = 0.;
     double maxBdt = 0.75;
     float bdtRange[nBdt];
 
@@ -55,7 +58,9 @@ void project_bdt(Double_t ptmin = 2, Double_t ptmax = 3, Double_t nTrees = 350, 
         for (Long64_t jentry=0; jentry<nentries; jentry++) {
             ntp[k] -> GetEntry(jentry);
             for(int bin = 0; bin < n_bin; bin++) {
-                if (BDTresponse >= bdtRange[bin])  his[bin][k]->Fill(D_mass);
+                if (D_pt>ptmin && D_pt<ptmax) {
+                    if (BDTresponse >= bdtRange[bin]) his[bin][k]->Fill(D_mass);
+                }
             }
         }
 
@@ -68,11 +73,44 @@ void project_bdt(Double_t ptmin = 2, Double_t ptmax = 3, Double_t nTrees = 350, 
         delete listOut;
     }
 
+    if (mixed){
+        TH1F *hisMxd[n_bin];
 
-    Double_t y[n_bin], x[n_bin], stat[n_bin];
+        for (int j = 0; j < n_bin; j++) {
+            hisMxd[j] = new TH1F(Form("D_mass_%.4f_ME", bdtRange[j]), "D_mass;m [GeV]", 2000, 0.4, 2.4);
+            hisMxd[j] -> Sumw2();
+        }
+        TFile* dataMxd = new TFile("../out_local_mix.root" ,"r");
+        TNtuple* ntpMxd = (TNtuple*)dataMxd -> Get("ntp_ME");
+
+        ntpMxd->SetBranchAddress("D_mass", &D_mass);
+        ntpMxd->SetBranchAddress("D_pt", &D_pt);
+        ntpMxd->SetBranchAddress("BDTresponse", &BDTresponse);
+        Long64_t nentries = ntpMxd->GetEntriesFast();
+
+        for (Long64_t jentry=0; jentry<nentries; jentry++) {
+            ntpMxd -> GetEntry(jentry);
+            for(int bin = 0; bin < n_bin; bin++) {
+                if (D_pt>ptmin && D_pt<ptmax) {
+                    if (BDTresponse >= bdtRange[bin]) hisMxd[bin]->Fill(D_mass);
+                }
+            }
+        }
+        f -> cd();
+        TList *listOut = new TList();
+        for (int i = 0; i < n_bin; i++) {
+            listOut->Add(hisMxd[i]);
+        }
+        listOut->Write("hists_ME", 1, 0);
+        delete listOut;
+    }
+
+
+    Double_t y[n_bin], x[n_bin], stat[n_bin], rawYields[n_bin], rawYieldsE[n_bin];
 
     TH1F *hisSubtr[n_bin];
     TList *listOut = new TList();
+    TString outFile;
 
 //    for (int l = 0; l < 1; ++l) {
     for (int l = 0; l < n_bin; ++l) {
@@ -83,7 +121,15 @@ void project_bdt(Double_t ptmin = 2, Double_t ptmax = 3, Double_t nTrees = 350, 
         hisSubtr[l] -> Rebin(10);
         listOut -> Add(hisSubtr[l]);
         //        cout<<fit(his[l][0], his[l][1], ptmin, ptmax, false, true, "bd")<<endl;
-        y[l] = fit(his[l][0], his[l][1], ptmin, ptmax, false, true, "bdt.root", bdtRange[l]);
+
+        //        y[l] = fit(his[l][0], his[l][1], ptmin, ptmax, false, true, "bdt.root", bdtRange[l]);
+        outFile=Form("signals_%.4fbdt.root", bdtRange[l]);
+        FitD0Peak *fitmass = new FitD0Peak(his[l][0], his[l][1], ptmin, ptmax, outFile);
+        fitmass->doStuff();
+        y[l] = fitmass->getSignificance();
+        rawYields[l] = fitmass->getRawYield();
+        rawYieldsE[l] = fitmass->getRawYieldError();
+        delete fitmass;
         x[l] = bdtRange[l];
     }
 
@@ -113,8 +159,24 @@ void project_bdt(Double_t ptmin = 2, Double_t ptmax = 3, Double_t nTrees = 350, 
 //    TGraphErrors* gr = new TGraph(n_bin, x, y);
     gr -> Draw("ap");
 
+
+
+    TGraphErrors* grRawYields = new TGraphErrors(n_bin, x, rawYields, 0, rawYieldsE);
+    grRawYields -> SetMarkerColor(9);
+    grRawYields->SetTitle("");
+    grRawYields->GetXaxis()->SetLabelSize(0.04);
+    grRawYields->GetYaxis()->SetLabelSize(0.04);
+    grRawYields->GetXaxis()->SetTitleSize(0.045);
+    grRawYields->GetYaxis()->SetTitleSize(0.045);
+    grRawYields->GetYaxis()->SetTitle("Raw yield");
+    grRawYields->GetYaxis()->SetTitleOffset(1.1);
+    grRawYields->GetXaxis()->SetTitle("BDT response cut");
+    grRawYields->SetMarkerSize(2.5);
+//    TGraphErrors* gr = new TGraph(n_bin, x, y);
+
     TFile *fSign = new TFile(Form("significance_pt_%.1f_%.1f_nTrees_%.1f_maxDepth_%.1f.root", ptmin, ptmax, nTrees, maxDepth),"RECREATE");
     gr -> Write(Form("gr_sign_pt_%.1f_%.1f_nTrees_%.1f_maxDepth_%.1f", ptmin, ptmax, nTrees, maxDepth));
+    grRawYields -> Write(Form("gr_rawYields_pt_%.1f_%.1f_nTrees_%.1f_maxDepth_%.1f", ptmin, ptmax, nTrees, maxDepth));
     fSign -> Close();
 
     TLatex txR;

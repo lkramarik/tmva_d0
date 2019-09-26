@@ -191,6 +191,8 @@ Double_t fit(TH1F* hInvMassSign, TH1F* hInvMassBack, Double_t ptminText, Double_
     gm->GetXaxis()->SetRangeUser(fitRMin,fitRMax);
 //    gm->GetYaxis()->SetRangeUser(-8.,30.0);
 
+
+
     Double_t mean = abs(fun0->GetParameter(3));
     Double_t sigma = abs(fun0->GetParameter(4));
     cout<<"mean from fit: "<<mean<<endl;
@@ -373,7 +375,7 @@ Double_t fit(TH1F* hInvMassSign, TH1F* hInvMassBack, Double_t ptminText, Double_
 //         gStyle->SetOptFit();
 
 
-/////////// PUBLSISH
+/////////// PUBLISH
     TCanvas *cP = new TCanvas("cPublish","cPublish",1200,1000);
     gPad->SetMargin(0.1,0.05,0.13,0.08);
 

@@ -1,6 +1,6 @@
 #!/bin/bash
 #set the number of pt bin and pass number here
-ptBin=1
+ptBin=3
 pass=0
 
 folderPt=pt_$ptBin

@@ -24,6 +24,7 @@ using namespace TMVA;
 void TMVAClassificationApplication( const char* inputF = "./../../files_to_run.list", TString output = "out_local.root", float ptmin = 2, float ptmax = 3) {
     cout<<ptmin<<" "<<ptmax<<endl;
 
+//    /* input file from input list
     TChain *ntp[2] = {new TChain("ntp_signal","ntp_signal"), new TChain("ntp_background","ntp_background")};
     std::string line;
     std::ifstream infile(inputF);
@@ -35,30 +36,18 @@ void TMVAClassificationApplication( const char* inputF = "./../../files_to_run.l
         ntp[0] -> Add(lineS);
         ntp[1] -> Add(lineS);
     }
+//    */
 
-//    TString input = "/home/lukas/work/dmesons/Dmaker_dAu/res_analyse/ntp/ntp_lukas_1704.root";
+//    TString input = "/home/lukas/work/dmesons/Dmaker_ndAu/Dmaker_dAu/ntp/ntp.D0.dcaDaughers007.costheta.US.1006.root";
 //    TFile* data = new TFile(input ,"r");
-//    TNtuple* ntp[2] = {(TNtuple*)data -> Get("ntp_signal"), (TNtuple*)data -> Get("ntp_background")};
+//    TFile* sim = new TFile("/home/lukas/work/tmva_d0/sim/ntpTMVA_D0.toyMc.1605.root" ,"r");
+//    TNtuple* ntp[2] = {(TNtuple*)sim -> Get("ntp_signal"), (TNtuple*)data -> Get("ntp_background")};
 
     TFile* Dplus_file = new TFile (output, "RECREATE");
 
     TMVA::Tools::Instance();
     std::map<std::string,int> Use;
 
-    // --- Cut optimisation
-    Use["Cuts"]            = 0;
-    Use["CutsD"]           = 0;
-    Use["CutsPCA"]         = 0;
-    Use["CutsGA"]          = 0;
-    Use["CutsSA"]          = 0;
-
-    // --- Neural Networks (all are feed-forward Multilayer Perceptrons)
-    Use["MLP"]             = 0; // Recommended ANN
-    Use["MLPBFGS"]         = 0; // Recommended ANN with optional training method
-    Use["MLPBNN"]          = 0; // Recommended ANN with BFGS training method and bayesian regulator
-    Use["CFMlpANN"]        = 0; // Depreciated ANN from ALEPH
-    Use["TMlpANN"]         = 0; // ROOT's own ANN
-    //
     // --- Support Vector Machine
     Use["SVM"]             = 0;
     //
@@ -82,13 +71,14 @@ void TMVAClassificationApplication( const char* inputF = "./../../files_to_run.l
 
     // --- Create the Reader object
     TMVA::Reader *reader = new TMVA::Reader( "!Color:!Silent" );
-    Float_t k_pt, pi1_pt, k_dca, pi1_dca, pi2_dca, dcaDaughters, cosTheta, D_decayL, dcaD0ToPv;
+    Float_t k_pt, pi1_pt, k_dca, pi1_dca, pi2_dca, dcaDaughters, cosTheta, D_decayL, dcaD0ToPv, primary, D_cosThetaStar, diffRemovedPrimary;
     reader->AddVariable("k_dca", &k_dca );
     reader->AddVariable("pi1_dca", &pi1_dca );
     reader->AddVariable("dcaDaughters", &dcaDaughters );
     reader->AddVariable("cosTheta", &cosTheta  );
     reader->AddVariable("D_decayL", &D_decayL );
     reader->AddVariable("dcaD0ToPv", &dcaD0ToPv );
+    reader->AddVariable("D_cosThetaStar", &D_cosThetaStar);
 
     TString dir    = "dataset/weights/";
 //    TString dir    = "weights/";
@@ -118,7 +108,8 @@ void TMVAClassificationApplication( const char* inputF = "./../../files_to_run.l
 
     TStopwatch sw;
     sw.Start();
-    TNtuple* ntp_range[2] = {new TNtuple("ntp_signal", "ntp_signal", "D_mass:D_pt:BDTresponse:dcaD0ToPv:dcaDaughters"), new TNtuple("ntp_background", "ntp_background", "D_mass:D_pt:BDTresponse:dcaD0ToPv:dcaDaughters")};
+    TNtuple* ntp_range[2] = {new TNtuple("ntp_signal", "ntp_signal", "D_mass:D_pt:BDTresponse:dcaD0ToPv:dcaDaughters:primary"), new TNtuple("ntp_background", "ntp_background", "D_mass:D_pt:BDTresponse:dcaD0ToPv:dcaDaughters:primary")};
+//    TNtuple* ntp_range[2] = {new TNtuple("ntp_signal", "ntp_signal", "D_mass:D_pt:BDTresponse:dcaD0ToPv:dcaDaughters:primary:diffRemovedPrimary"), new TNtuple("ntp_background", "ntp_background", "D_mass:D_pt:BDTresponse:dcaD0ToPv:dcaDaughters:primary:diffRemovedPrimary")};
 
     float hodnoty[4] = {0};
     for (int i = 0; i < 2; ++i) {
@@ -132,6 +123,8 @@ void TMVAClassificationApplication( const char* inputF = "./../../files_to_run.l
         ntp[i]->SetBranchAddress("D_pt", &D_pt);
         ntp[i]->SetBranchAddress("dcaD0ToPv", &dcaD0ToPv);
         ntp[i]->SetBranchAddress("cosTheta", &cosTheta);
+        ntp[i]->SetBranchAddress("primary", &primary);
+//        ntp[i]->SetBranchAddress("diffRemovedPrimary", &diffRemovedPrimary);
         ntp[i]->SetBranchAddress("dcaDaughters", &dcaDaughters);
 
 //        for (Long64_t ievt = 0; ievt < 10000; ievt++) {
@@ -151,7 +144,8 @@ void TMVAClassificationApplication( const char* inputF = "./../../files_to_run.l
                     if (Use["BDT"]) {
                         float valueMVA = reader->EvaluateMVA("BDT method");
                         histBdt->Fill(valueMVA);
-                        ntp_range[i]->Fill(D_mass, D_pt, valueMVA, dcaD0ToPv, dcaDaughters);
+                        ntp_range[i]->Fill(D_mass, D_pt, valueMVA, dcaD0ToPv, dcaDaughters, primary);
+//                        ntp_range[i]->Fill(D_mass, D_pt, valueMVA, dcaD0ToPv, dcaDaughters, primary, diffRemovedPrimary);
                     }
                 }
             }

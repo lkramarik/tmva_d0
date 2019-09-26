@@ -19,7 +19,7 @@
 
 using tmvaCuts::PtBins;
 using tmvaCuts::totalNumberOfEvents;
-void makeSignificance(TString, int, int);
+void makeSignificance(TString, int, int, TString);
 
 void tmvaD0(TString myMethodList = "CutsGA", int ptBin = 1, int pass = 1) {
     cout << "ptBin " << ptBin << endl;
@@ -31,11 +31,11 @@ void tmvaD0(TString myMethodList = "CutsGA", int ptBin = 1, int pass = 1) {
     TMVA::Tools::Instance();
 
     std::map<std::string, int> Use;
-    Use["Cuts"] = 1; //1
+    Use["Cuts"] = 0; //1
     Use["CutsD"] = 0; //1
     Use["CutsPCA"] = 0;
     Use["CutsGA"] = 0;
-    Use["CutsSA"] = 0;
+    Use["CutsSA"] = 1;
 
     std::cout << std::endl;
     std::cout << "==> Start TMVA D0" << std::endl;
@@ -77,8 +77,9 @@ void tmvaD0(TString myMethodList = "CutsGA", int ptBin = 1, int pass = 1) {
     dataloader->AddSpectator("D_mass", 'F');
 
     // Read training and test data
-    TFile *inputSignal = new TFile("/home/lukas/work/tmva_d0/sim/ntpTMVA_D0.toyMc.Large.root");
+    TFile *inputSignal = new TFile("/home/lukas/work/tmva_d0/sim/ntpTMVA_D0.toyMc.0803.root");
 //    TFile *inputSignal = new TFile("/home/lukas/work/tmva_d0/sim/ntpTMVA_D0.toyMc.root");
+//    TTree *signal = (TTree *) inputSignal->Get("nt");
     TTree *signal = (TTree *) inputSignal->Get("ntp_signal");
     std::cout << "--- TMVA D0 : Using input signal file: " << inputSignal->GetName() << std::endl;
     dataloader->AddSignalTree(signal, 1);
@@ -88,11 +89,15 @@ void tmvaD0(TString myMethodList = "CutsGA", int ptBin = 1, int pass = 1) {
     dataloader->AddBackgroundTree(backgroundSameSign, 1);
 
     int nEntriesSignalTree = signal->GetEntries();
-    TH1F *hMcPt = (TH1F *) inputSignal->Get("hMcPt");
-    int const nOriginalSignalEntriesMCPt = hMcPt->Integral(hMcPt->FindBin(ptmin), hMcPt->FindBin(ptmax)); // Number of simulated D0/D0bar in this pT bin before efficiency (and detector?)
-    int const nOriginalSignalEntries = nOriginalSignalEntriesMCPt; // Number of simulated D0/D0bar in this pT bin before efficiency
+//    TH1F *hMcPt = (TH1F *) inputSignal->Get("hMcPt");
+//    int const nOriginalSignalEntriesMCPt = hMcPt->Integral(hMcPt->FindBin(ptmin), hMcPt->FindBin(ptmax)); // Number of simulated D0/D0bar in this pT bin before efficiency (and detector?)
 
-    TString signalWeightExpression = TString::Format("8*((%f/%f)*2.*0.8*3.14*D_pt*2*(%f)*2.*exp(-1.45-1.73*D_pt)*0.00389*weight)", (float) totalNumberOfEvents, (float) nOriginalSignalEntries, ptmax - ptmin);
+    int const nOriginalSignalEntries = signal->GetEntries(Form("D_pt>%f && D_pt<%f", ptmin, ptmax));
+    int const nOriginalSignalEntriesMCPt = nOriginalSignalEntries;
+
+    float effTopo = 0.02;
+    TString signalWeightExpression = TString::Format("8*((%f/%f)*2.*3.14*2.*2.*D_pt*(%f)*exp(-1.45-1.73*D_pt)*0.0389)*0.1*(%f)", (float) totalNumberOfEvents, (float) nOriginalSignalEntries, ptmax - ptmin, effTopo);
+    //                                                  Nevents/NorigEntries * 2 * pi * Ncharge * dy * Dpt * dpT * D0AuAushape * BR * eff * effTopo
     int nEventsBackgroundTree = backgroundSameSign->GetEntries();
     TString backgroundWeightExpression = "1";
 
@@ -128,7 +133,7 @@ void tmvaD0(TString myMethodList = "CutsGA", int ptBin = 1, int pass = 1) {
     cout << "Background counts passed cuts: " << nBackground << endl;
     cout << "------------------------------------------------------------------\n";
 
-    int maxNSignal = 800000;
+    int maxNSignal = 80000;
     int maxNBackground = 10000000;
     if (nSignal > maxNSignal) nSignal = maxNSignal;
     if (nBackground > maxNBackground) nBackground = maxNBackground;
@@ -146,10 +151,10 @@ void tmvaD0(TString myMethodList = "CutsGA", int ptBin = 1, int pass = 1) {
         factory->BookMethod(dataloader, TMVA::Types::kCuts, "CutsPCA", "!H:!V:FitMethod=MC:EffSel:SampleSize=200000:VarProp=FSmart:VarTransform=PCA");
 
     if (Use["CutsGA"])
-        factory->BookMethod(dataloader, TMVA::Types::kCuts, "CutsGA", "H:!V:FitMethod=GA:CutRangeMin[0]=-10:CutRangeMax[0]=10:VarProp[1]=FMax:EffSel:Steps=30:Cycles=3:PopSize=400:SC_steps=10:SC_rate=5:SC_factor=0.95");
+        factory->BookMethod(dataloader, TMVA::Types::kCuts, "CutsGA", "H:!V:FitMethod=GA:CutRangeMin[0]=-10:CutRangeMax[0]=10:VarProp[1]=FMax:EffSel:Steps=50:Cycles=3:PopSize=600:SC_steps=10:SC_rate=5:SC_factor=0.95"); //nsteps?
 
     if (Use["CutsSA"])
-        factory->BookMethod(dataloader, TMVA::Types::kCuts, "CutsSA", "!H:!V:FitMethod=SA:EffSel:MaxCalls=150000:KernelTemp=IncAdaptive:InitialTemp=1e+6:MinTemp=1e-6:Eps=1e-10:UseDefaultScale");
+        factory->BookMethod(dataloader, TMVA::Types::kCuts, "CutsSA", "!H:!V:FitMethod=SA:EffSel:MaxCalls=15000:KernelTemp=IncAdaptive:InitialTemp=1e+6:MinTemp=1e-6:Eps=1e-10:UseDefaultScale");
 
     factory->TrainAllMethods();
     factory->TestAllMethods();
@@ -175,15 +180,23 @@ void tmvaD0(TString myMethodList = "CutsGA", int ptBin = 1, int pass = 1) {
     cout << "Background counts passed cuts: " << nBackground << endl;
     cout << "------------------------------------------------------------------\n";
 
+    if (Use["CutsGA"]) {
+        makeSignificance(outfileName, nSignal, nBackground, "CutsGA");
+    }
+
     if (Use["Cuts"]) {
-        makeSignificance(outfileName, nSignal, nBackground);
+        makeSignificance(outfileName, nSignal, nBackground, "Cuts");
+    }
+
+    if (Use["CutsSA"]) {
+        makeSignificance(outfileName, nSignal, nBackground, "CutsSA");
     }
 }
 
-void makeSignificance(TString outfileName, int nSignal, int nBackground) {
+void makeSignificance(TString outfileName, int nSignal, int nBackground, TString method) {
     TFile *outputFile = TFile::Open(outfileName, "UPDATE");
-    TH1F *effS = static_cast<TH1F *>(outputFile->Get("dataset/Method_Cuts/Cuts/MVA_Cuts_effS"));
-    TH1F *effB = static_cast<TH1F *>(outputFile->Get("dataset/Method_Cuts/Cuts/MVA_Cuts_effB"));
+    TH1F *effS = static_cast<TH1F *>(outputFile->Get(Form("dataset/Method_%s/%s/MVA_%s_effS", method.Data(), method.Data(), method.Data())));
+    TH1F *effB = static_cast<TH1F *>(outputFile->Get(Form("dataset/Method_%s/%s/MVA_%s_effB", method.Data(), method.Data(), method.Data())));
     TH1F* hSignificance = new TH1F("hSignificance", "Estimated significance", effS->GetNbinsX(), effS->GetMinimum(), effS->GetMaximum());
     Double_t NeffS, NeffB;
     for (int i = 1; i < effS->GetNbinsX()+1; ++i) {

@@ -35,11 +35,11 @@ void TMVAClassificationApplication( TString myMethodList = "", int ptBin = 1, in
     TMVA::Tools::Instance();
     std::map<std::string, int> Use;
 
-    Use["Cuts"] = 1;
+    Use["Cuts"] = 0;
     Use["CutsD"] = 0;
     Use["CutsPCA"] = 0;
     Use["CutsGA"] = 0;
-    Use["CutsSA"] = 0;
+    Use["CutsSA"] = 1;
 
     std::cout << std::endl;
     std::cout << "==> Start TMVAClassificationApplication" << std::endl;
@@ -106,6 +106,17 @@ void TMVAClassificationApplication( TString myMethodList = "", int ptBin = 1, in
         heffB = static_cast<TH1F *>(inputTraining->Get("dataset/Method_Cuts/Cuts/MVA_Cuts_effB"));
     }
 
+    if (Use["CutsGA"]) {
+        heffS = static_cast<TH1F *>(inputTraining->Get("dataset/Method_CutsGA/CutsGA/MVA_CutsGA_effS"));
+        heffB = static_cast<TH1F *>(inputTraining->Get("dataset/Method_CutsGA/CutsGA/MVA_CutsGA_effB"));
+    }
+
+    if (Use["CutsSA"]) {
+        heffS = static_cast<TH1F *>(inputTraining->Get("dataset/Method_CutsSA/CutsSA/MVA_CutsSA_effS"));
+        heffB = static_cast<TH1F *>(inputTraining->Get("dataset/Method_CutsSA/CutsSA/MVA_CutsSA_effB"));
+    }
+
+    heffS->Draw();
     // Select efficiency, that you want to use for getting cuts trained by the classifier
     // Efficiency setter for cut method
     Double_t effS = 0.5;
@@ -227,20 +238,24 @@ int main( int argc, char** argv ) {
 
 //___________________________________________________________________________________________________
 void makeDetailedAnalysis(TTree* signal, TTree* background, TMVA::Reader* reader, TH1F* effS) {
+    TString method = "CutsSA method";
+//    TString method = "Cuts method";
+//    TString method = "CutsGA method";
     cout<<"--- Starting the detailed analysis"<<endl;
     TTree* ntp[2] = {signal, background};
     TString name[2] = {"signal", "background"};
-    TMVA::MethodCuts *methodCuts = reader->FindCutsMVA("Cuts method");
+
+    TMVA::MethodCuts *methodCuts = reader->FindCutsMVA(method);
+
     TFile *f = new TFile(Form("TMVA_cuts_pt_%.1f_%.1f.root", ptmin, ptmax),"RECREATE");
 
     const int nEffS = effS->GetNbinsX();
     Float_t effSAxisArray[nEffS];
-
     //Filling Ntuple with all of the cuts for all of the signall efficiencies
     TNtuple* ntpCuts = new TNtuple("ntpCuts","cutsTuple","effS:k_dca_min:k_dca_max:pi1_dca_min:pi1_dca_max:dcaDaughters_min:dcaDaughters_max:dcaD0ToPv_min:dcaD0ToPv_max");
     const int nNtVars = ntpCuts->GetNvar();
     Float_t ntVar[nNtVars];
-    TMVA::MethodCuts *mcuts = reader->FindCutsMVA("Cuts method");
+    TMVA::MethodCuts *mcuts = reader->FindCutsMVA(method);
 
     for (int i = 1; i < effS->GetNbinsX()+1; ++i) {
         effSAxisArray[i-1] = effS->GetBinCenter(i);
@@ -270,6 +285,7 @@ void makeDetailedAnalysis(TTree* signal, TTree* background, TMVA::Reader* reader
         }
     }
 
+//    methodCuts->PrintCuts(); //just a test...that reader and everything  is correctly loaded
     methodCuts->PrintCuts(effSAxisArray[30]); //just a test...that reader and everything  is correctly loaded
 
     //Projecting and evaluating cuts for signal and background  trees
@@ -287,8 +303,10 @@ void makeDetailedAnalysis(TTree* signal, TTree* background, TMVA::Reader* reader
         for (Long64_t jentry = 0; jentry < ntp[k]->GetEntries(); jentry++) {
             ntp[k]->GetEntry(jentry);
             for (int bin = 0; bin < nEffS; ++bin) {
-                Bool_t goodEvent = reader->EvaluateMVA("Cuts method", effSAxisArray[bin]); //cut evaluation: returns ok if event passed, 0.0 otherwise
-                if (goodEvent) his[bin][k]->Fill(D_mass);
+                if (D_pt>ptmin && D_pt<ptmax) {
+                    Bool_t goodEvent = reader->EvaluateMVA(method, effSAxisArray[bin]); //cut evaluation: returns ok if event passed, 0.0 otherwise
+                    if (goodEvent) his[bin][k]->Fill(D_mass);
+                }
             }
         }
 
@@ -314,7 +332,7 @@ void makeDetailedAnalysis(TTree* signal, TTree* background, TMVA::Reader* reader
         hisSubtr[l]->Add(his[l][1], -1);
         hisSubtr[l]->Rebin(10);
         listOut->Add(hisSubtr[l]);
-        y[l] = fit(his[l][0], his[l][1], ptmin, ptmax, false, true, Form("%.4f", effSAxisArray[l]), effSAxisArray[l]);
+        y[l] = fit(his[l][0], his[l][1], ptmin, ptmax, false, true, Form("%.4f.root", effSAxisArray[l]), effSAxisArray[l]);
         x[l] = effSAxisArray[l];
     }
 

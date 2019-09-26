@@ -26,7 +26,8 @@ using tmvaCuts::totalNumberOfEvents;
 void TMVAClassification(float ptmin = 2, float ptmax = 3, float nTrees = 350, float treeDepth = 4) {
 //   TString inputSignalStr = "/home/lukas/work/tmva_d0/sim/ntpTMVA_D0.toyMc.Large.root";
 //   TString inputSignalStr = "/home/lukas/work/tmva_d0/sim/ntpTMVA_D0.toyMc_veryLarge.root";
-   TString inputSignalStr = "/home/lukas/work/tmva_d0/sim/ntpTMVA_D0.toyMc_veryLarge_Dete.root";
+   TString inputSignalStr = "/home/lukas/work/tmva_d0/sim/ntpTMVA_D0.toyMc.1605.root";
+//   TString inputSignalStr = "/home/lukas/work/tmva_d0/sim/ntpTMVA_D0.toyMc_veryLarge_Dete.root";
 //   TString inputSignalStr = "/gpfs01/star/pwg/lkramarik/tmva_d0/sim/ntpTMVA_D0.toyMc.Large.root";
     cout<<ptmin<<" "<<ptmax<<endl;
     const char* inputF = "./../../files_to_run.list";
@@ -39,8 +40,6 @@ void TMVAClassification(float ptmin = 2, float ptmax = 3, float nTrees = 350, fl
    Use["BDTB"]            = 0; // uses Bagging
    Use["BDTD"]            = 0; // decorrelation + Adaptive Boost
    Use["BDTF"]            = 0; // allow usage of fisher discriminant for node splitting 
-   // --- Friedman's RuleFit method, ie, an optimised series of cuts ("rules")
-   Use["RuleFit"]         = 0;
 
    std::cout << std::endl;
    std::cout << "==> Start TMVAClassification" << std::endl;
@@ -61,6 +60,7 @@ void TMVAClassification(float ptmin = 2, float ptmax = 3, float nTrees = 350, fl
    dataloader->AddVariable("cosTheta","cos(#theta)" ,"", 'F' );
    dataloader->AddVariable("D_decayL", "Decay length" ,"cm", 'F' );
    dataloader->AddVariable("dcaD0ToPv", "D^{0} DCA" ,"cm", 'F' );
+   dataloader->AddVariable("D_cosThetaStar", "cos(#theta^{*})" ,"", 'F' );
 
    // You can add so-called "Spectator variables", which are not used in the MVA training,
    // but will appear in the final "TestTree" produced by TMVA. This TestTree will contain the
@@ -138,7 +138,7 @@ void TMVAClassification(float ptmin = 2, float ptmax = 3, float nTrees = 350, fl
    signal->Draw("D_pt>>hPtSignal", signalWeightExpression * mycuts, "e");
 //   hPtBackground->Add(hPtBackgroundSideBand);
 
-    dataloader->PrepareTrainingAndTestTree(mycuts, mycutb, "nTrain_Signal=10000:nTrain_Background=0:SplitMode=Random:NormMode=NumEvents:!V");
+    dataloader->PrepareTrainingAndTestTree(mycuts, mycutb, "nTrain_Signal=0:nTrain_Background=0:SplitMode=Random:NormMode=NumEvents:!V");
 
    // Cut optimisation
 
@@ -148,7 +148,11 @@ void TMVAClassification(float ptmin = 2, float ptmax = 3, float nTrees = 350, fl
 
    if (Use["BDT"]) {  // Adaptive Boost
        TString optionsTrees = Form("NTrees=%f:MaxDepth=%f", nTrees, treeDepth);
-       TString option = optionsTrees + "!H:!V:MinNodeSize=2.5%:BoostType=AdaBoost:AdaBoostBeta=0.5:UseBaggedBoost:BaggedSampleFraction=0.5:SeparationType=GiniIndex:nCuts=20";
+       TString option = optionsTrees + "!H:!V:MinNodeSize=2.5%:BoostType=AdaBoost:AdaBoostBeta=0.5:UseBaggedBoost:BaggedSampleFraction=0.5:SeparationType=GiniIndex:nCuts=-1";
+
+       //Brieman random forest
+//       TString option = "!H:!V:NTrees=400:MaxDepth=7:UseRandomisedTrees:UseNvars=7:BaggedSampleFraction=0.6:nCuts=-1:CreateMVAPdfs";
+
        factory->BookMethod(dataloader, TMVA::Types::kBDT, "BDT", option);
    }
    if (Use["BDTB"]) // Bagging
