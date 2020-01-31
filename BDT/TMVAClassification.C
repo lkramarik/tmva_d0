@@ -26,7 +26,8 @@ using tmvaCuts::totalNumberOfEvents;
 void TMVAClassification(float ptmin = 2, float ptmax = 3, float nTrees = 350, float treeDepth = 4) {
 //   TString inputSignalStr = "/home/lukas/work/tmva_d0/sim/ntpTMVA_D0.toyMc.Large.root";
 //   TString inputSignalStr = "/home/lukas/work/tmva_d0/sim/ntpTMVA_D0.toyMc_veryLarge.root";
-   TString inputSignalStr = "/home/lukas/work/tmva_d0/sim/ntpTMVA_D0.toyMc.1605.root";
+   TString inputSignalStr = "/home/lukas/work/tmva_d0/sim/ntpTMVA_D0.toyMC.0910.root";
+//   TString inputSignalStr = "/home/lukas/work/tmva_d0/sim/ntpTMVA_D0.toyMc.1605.root";
 //   TString inputSignalStr = "/home/lukas/work/tmva_d0/sim/ntpTMVA_D0.toyMc_veryLarge_Dete.root";
 //   TString inputSignalStr = "/gpfs01/star/pwg/lkramarik/tmva_d0/sim/ntpTMVA_D0.toyMc.Large.root";
     cout<<ptmin<<" "<<ptmax<<endl;
@@ -90,7 +91,6 @@ void TMVAClassification(float ptmin = 2, float ptmax = 3, float nTrees = 350, fl
 //   factory->AddBackgroundTree(backgroundSideBand, backgroundWeight);
 
    TFile *inputSignal = new TFile(inputSignalStr);
-//    TFile *inputSignal = new TFile("/home/lukas/work/tmva_d0/sim/ntpTMVA_D0.toyMc.root");
    TTree *signal = (TTree *) inputSignal->Get("ntp_signal");
    std::cout << "--- TMVA D0       : Using input signal file: " << inputSignal->GetName() << std::endl;
    Double_t signalWeight = 1.;
@@ -105,18 +105,19 @@ void TMVAClassification(float ptmin = 2, float ptmax = 3, float nTrees = 350, fl
    int const nOriginalSignalEntries = nOriginalSignalEntriesMCPt; // Number of simulated D0/D0bar in this pT bin before efficiency
 
 //   TString signalWeightExpression = TString::Format("1*weight*((%f/%f)*0.8*2.*3.14*D_pt*2*(%f)*2.*exp(-1.45-1.73*D_pt)*0.0389)", (float)totalNumberOfEvents, (float)nOriginalSignalEntries, ptmax-ptmin);
-   TString signalWeightExpression = TString::Format("((%f/%f)*0.8*2.*3.14*D_pt*2*(%f)*2.*exp(-1.45-1.73*D_pt))", (float)totalNumberOfEvents, (float)nOriginalSignalEntries, ptmax-ptmin);
-   dataloader->SetSignalWeightExpression(signalWeightExpression);
+//   TString signalWeightExpression = TString::Format("((%f/%f)*0.8*2.*3.14*D_pt*2*(%f)*2.*exp(-1.45-1.73*D_pt))", (float)totalNumberOfEvents, (float)nOriginalSignalEntries, ptmax-ptmin);
+   TString signalWeightExpression = "1";
+//   dataloader->SetSignalWeightExpression(signalWeightExpression);
    TString backgroundWeightExpression = "1";
 
 
    // Apply additional cuts on the signal and background samples (can be different)
 //   TCut mycuts = "D_pt<3 && D_pt>2 && k_pt>0.15 && pi1_pt>0.15 && k_dca>0.002 && pi1_dca>0.002 && cosTheta>0.5";
 
-   TCut mycuts = Form("D_mass > 1. && D_mass < 3 && D_pt>%1.2f && D_pt<%1.2f && k_pt>%1.2f && pi1_pt>%1.2f && "
+   TCut mycuts = Form("D_mass > 1. && D_mass < 3. && D_pt>%1.2f && D_pt<%1.2f && k_pt>%1.2f && pi1_pt>%1.2f && " //_mass > 1.76 && D_mass < 1.96
                        "D_decayL>%f && D_decayL<0.2 && "
                        "dcaDaughters<%f && "
-                       "k_dca>%f && k_dca<0.2 && "
+                       "k_dca>%f && k_dca<0.2 && " //lets change to 0.1, was 0.2
                        "pi1_dca>%f && pi1_dca<0.2 && "
                        "dcaD0ToPv<%f && "
                        "cosTheta>%f",
@@ -144,7 +145,7 @@ void TMVAClassification(float ptmin = 2, float ptmax = 3, float nTrees = 350, fl
 
    if (Use["BDTG"]) // Gradient Boost
       factory->BookMethod(dataloader, TMVA::Types::kBDT, "BDTG",
-                           "!H:!V:NTrees=1000:MinNodeSize=2.5%:BoostType=Grad:Shrinkage=0.10:UseBaggedBoost:BaggedSampleFraction=0.5:nCuts=20:MaxDepth=2" );
+                           "!H:!V:NTrees=1000:MinNodeSize=5%:BoostType=Grad:Shrinkage=0.10:UseBaggedBoost:BaggedSampleFraction=0.5:nCuts=20:MaxDepth=2" );
 
    if (Use["BDT"]) {  // Adaptive Boost
        TString optionsTrees = Form("NTrees=%f:MaxDepth=%f", nTrees, treeDepth);

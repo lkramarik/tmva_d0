@@ -25,7 +25,7 @@ void project_bdt(Double_t ptmin = 2, Double_t ptmax = 3, Double_t nTrees = 350, 
     const int nBdt = 70;
     const int n_bin = nBdt;
     double minBdt = 0.;
-    double maxBdt = 0.75;
+    double maxBdt = 1.;
     float bdtRange[nBdt];
 
     double BinBdt = (maxBdt-minBdt)/double(nBdt);
@@ -171,7 +171,7 @@ void project_bdt(Double_t ptmin = 2, Double_t ptmax = 3, Double_t nTrees = 350, 
     grRawYields->GetYaxis()->SetTitle("Raw yield");
     grRawYields->GetYaxis()->SetTitleOffset(1.1);
     grRawYields->GetXaxis()->SetTitle("BDT response cut");
-    grRawYields->SetMarkerSize(2.5);
+    grRawYields->SetMarkerSize(1.2);
 //    TGraphErrors* gr = new TGraph(n_bin, x, y);
 
     TFile *fSign = new TFile(Form("significance_pt_%.1f_%.1f_nTrees_%.1f_maxDepth_%.1f.root", ptmin, ptmax, nTrees, maxDepth),"RECREATE");

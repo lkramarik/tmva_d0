@@ -10,6 +10,7 @@
 #include "TAxis.h"
 #include "TMultiGraph.h"
 #include "TLegend.h"
+#include "TPaveText.h"
 #include <stdio.h>
 
 using namespace std;
@@ -22,9 +23,9 @@ void drawEff(){
 //    std::vector<TString*> legendStrings;
     std::vector<const char *> legendStrings;
 
-    TString names[] = {"pt_1.0_2.0_nTrees_400.0_maxDepth_3.0",
-                       "pt_2.0_3.0_nTrees_300.0_maxDepth_2.0",
-                       "pt_3.0_5.0_nTrees_300.0_maxDepth_3.0"
+    TString names[] = {"pt_1.0_2.0_nTrees_100.0_maxDepth_3.0",
+                       "pt_2.0_3.0_nTrees_150.0_maxDepth_3.0",
+                       "pt_3.0_5.0_nTrees_400.0_maxDepth_3.0"
     };
 
 
@@ -49,14 +50,14 @@ void drawEff(){
         TGraphErrors *gr = (TGraphErrors*) inputFilesF[i]->Get(Form("gr_sign_%s",names[i].Data()));
         for (int j = 0; j < gr->GetN(); ++j) {
             gr->GetPoint(j,x,y);
-            if (abs(y)>10) gr->RemovePoint(j);
+            if (abs(y)>20) gr->RemovePoint(j);
             if (x>1) gr->RemovePoint(j);
             if (y!=y) gr->RemovePoint(j);
         }
         graphs.push_back(gr);
 
     }
-    TCanvas *out = new TCanvas("out", "out", 1200, 1000);
+    TCanvas *out = new TCanvas("out", "out", 1000, 800);
 
     TMultiGraph *mg = new TMultiGraph();
 //    mg->GetYaxis()->SetTitle("n#sigma sigma [n#sigma]");
@@ -64,9 +65,8 @@ void drawEff(){
     mg->GetYaxis()->SetTitle("Significance");
 //    mg->GetYaxis()->SetTitle("TOF match efficiency");
     mg->GetXaxis()->SetTitle("Cut value applied on BDT output");
-//    mg->SetTitleSize(0.96,"xy");
-    mg->GetXaxis()->SetTitleSize(0.96);
     mg->SetTitle("");
+
 //    mg->SetTitle("Pions");
     TLegend *legend = new TLegend(0.126, 0.71, 0.277, 0.85);
     legend -> SetFillStyle(0);
@@ -76,16 +76,33 @@ void drawEff(){
     for (unsigned short j = 0; j < graphs.size(); ++j) {
         graphs[j]->SetMarkerColor(colors[j]);
         graphs[j]->SetMarkerStyle(markers[j]);
-        graphs[j]->SetMarkerSize(1.7);
+        graphs[j]->SetMarkerSize(1.2);
         graphs[j]->SetLineColor(colors[j]);
-        graphs[j]->GetYaxis()->SetRangeUser(0,1);
+        graphs[j]->GetYaxis()->SetRangeUser(0,10);
+        graphs[j]->GetYaxis()->SetTitleOffset(0.9);
         graphs[j]->SetName(Form("%i",j));
         legend -> AddEntry(graphs[j], legendStrings[j], "p");
         mg->Add(graphs[j]);
     }
 
 //    mg->SetMinimum(0);
-    mg->Draw("ap");
+    graphs[0]->GetYaxis()->SetLabelSize(0.045);
+    graphs[0]->GetXaxis()->SetLabelSize(0.045);
+    graphs[0]->GetXaxis()->SetTitleSize(0.055);
+    graphs[0]->GetYaxis()->SetTitleSize(0.055);
+    graphs[0]->GetXaxis()->CenterTitle();
+    graphs[0]->GetYaxis()->CenterTitle();
+    graphs[0]->Draw("ap");
+
+    for (int l = 1; l < graphs.size(); ++l) {
+        graphs[l]->Draw("p same");
+
+    }
+
+
+
+    gPad->Modified();
+
     TPaveText *text5 = new TPaveText(0.232,0.86,0.30,0.88,"brNDC");
     text5->SetTextSize(0.035);
     text5->SetLineColor(0);
@@ -93,7 +110,6 @@ void drawEff(){
     text5->SetFillColor(0);
     text5->SetTextFont(42);
     text5->AddText("d+Au #sqrt{s_{NN}} = 200 GeV");
-//    mg->GetYaxis()->SetRangeUser(0.,20.);
     text5->Draw("same");
     legend->Draw("same");
 }

@@ -24,7 +24,8 @@ using namespace TMVA;
 void TMVAClassificationApplicationSIM(TString output = "out_local_SIM.root", float ptmin = 2, float ptmax = 3) {
     cout<<ptmin<<" "<<ptmax<<endl;
 
-    TFile* sim = new TFile("/home/lukas/work/tmva_d0/sim/ntpTMVA_D0.toyMc.1605.root" ,"r");
+    TFile* sim = new TFile("/home/lukas/work/tmva_d0/sim/ntpTMVA_D0.toyMC.0910.fullEff.root" ,"r");
+//    TFile* sim = new TFile("/home/lukas/work/tmva_d0/sim/ntpTMVA_D0.toyMc.1605.root" ,"r");
     TNtuple* ntp = (TNtuple*)sim -> Get("ntp_signal");
 
     TFile* Dplus_file = new TFile (output, "RECREATE");
@@ -98,20 +99,20 @@ void TMVAClassificationApplicationSIM(TString output = "out_local_SIM.root", flo
         if (ievt % 1000000 == 0) std::cout << "--- ... Processing signal, event: " << ievt << std::endl;
         ntp->GetEntry(ievt);
         if (D_pt < ptmax && D_pt > ptmin) {
-            if  (k_pt>tmvaCuts::minPt && pi1_pt>tmvaCuts::minPt &&
-                 D_decayL>tmvaCuts::decayLength && D_decayL<0.2 &&
-                 dcaDaughters<tmvaCuts::dcaDaughters &&
-                 k_dca>tmvaCuts::kDca && k_dca<0.2 &&
-                 pi1_dca>tmvaCuts::pDca && pi1_dca<0.2 &&
-                 dcaD0ToPv < tmvaCuts::dcaV0ToPv &&
-                 cosTheta > tmvaCuts::cosTheta) {
+//            if  (k_pt>tmvaCuts::minPt && pi1_pt>tmvaCuts::minPt &&
+//                 D_decayL>tmvaCuts::decayLength && D_decayL<0.2 &&
+//                 dcaDaughters<tmvaCuts::dcaDaughters &&
+//                 k_dca>tmvaCuts::kDca && k_dca<0.2 &&
+//                 pi1_dca>tmvaCuts::pDca && pi1_dca<0.2 &&
+//                 dcaD0ToPv < tmvaCuts::dcaV0ToPv &&
+//                 cosTheta > tmvaCuts::cosTheta) {
 
                 if (Use["BDT"]) {
                     float valueMVA = reader->EvaluateMVA("BDT method");
                     histBdt->Fill(valueMVA);
                     ntp_range->Fill(D_mass, D_pt, valueMVA, dcaD0ToPv, dcaDaughters,pid);
                 }
-            }
+//            }
         }
     }
 

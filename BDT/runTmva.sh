@@ -1,8 +1,8 @@
 #!/bin/bash
-ptmin=2
-ptmax=3
-treeDepth=2
-nTrees=300
+ptmin=3
+ptmax=5
+treeDepth=3
+nTrees=400
 
 folderPt=pt_${ptmin}_${ptmax}
 folderTMVA=n${nTrees}_d${treeDepth}
@@ -17,9 +17,9 @@ cp -i ../../TMVAClassificationApplicationSIM.C ./
 #cp -i ../TMVAClassificationApplicationMixed.C ./
 cp -i ../../tmvaCuts.h ./
 
-root -l -q TMVAClassification.C++\($ptmin,$ptmax,$nTrees,$treeDepth\)
+#root -l -q TMVAClassification.C++\($ptmin,$ptmax,$nTrees,$treeDepth\)
 root -l -q TMVAClassificationApplication.C++\(\"./../../files_to_run.list\",\"out_local.root\",${ptmin},${ptmax}\)
-root -l -q TMVAClassificationApplicationSIM.C++\(\"out_local_SIM.root\",${ptmin},${ptmax}\)
+#root -l -q TMVAClassificationApplicationSIM.C++\(\"out_local_SIM.root\",${ptmin},${ptmax}\)
 
 #root -l -q TMVAClassificationApplicationMixed.C++\(\"out_local_mix.root\",${ptmin},${ptmax}\)
 #
