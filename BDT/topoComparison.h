@@ -1,7 +1,3 @@
-//
-// Created by lukas on 31.01.20.
-//
-
 #ifndef BDT_TOPOCOMPARISON_H
 #define BDT_TOPOCOMPARISON_H
 #include "TCut.h"

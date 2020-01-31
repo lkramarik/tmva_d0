@@ -1,6 +1,4 @@
 #include "topoComparison.h"
-
-
 #include "TCut.h"
 #include "TCanvas.h"
 #include "TNtuple.h"
@@ -13,8 +11,6 @@
 #include <iostream>
 
 ClassImp(topoComparison)
-
-
 
 topoComparison::topoComparison() :
                    mCuts(), mVars(), mTuples(){
