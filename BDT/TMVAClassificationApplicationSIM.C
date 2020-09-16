@@ -21,10 +21,11 @@
 
 using namespace TMVA;
 
-void TMVAClassificationApplicationSIM(TString output = "out_local_SIM.root", float ptmin = 2, float ptmax = 3) {
+void TMVAClassificationApplicationSIM(TString input = "/home/lukas/work/sim/tupleManage/ntpTMVA_full_D0.toyMC.0910.root", TString output = "out_local_SIM.root", float ptmin = 2, float ptmax = 3) {
     cout<<ptmin<<" "<<ptmax<<endl;
 
-    TFile* sim = new TFile("/home/lukas/work/tmva_d0/sim/ntpTMVA_D0.toyMC.0910.fullEff.root" ,"r");
+    TFile* sim = new TFile(input ,"r");
+//    TFile* sim = new TFile("/home/lukas/work/tmva_d0/sim/ntpTMVA_D0.toyMC.0910.fullEff.root" ,"r");
 //    TFile* sim = new TFile("/home/lukas/work/tmva_d0/sim/ntpTMVA_D0.toyMc.1605.root" ,"r");
     TNtuple* ntp = (TNtuple*)sim -> Get("ntp_signal");
 
@@ -35,20 +36,18 @@ void TMVAClassificationApplicationSIM(TString output = "out_local_SIM.root", flo
 
     // --- Boosted Decision Trees
     Use["BDT"]             = 1; // uses Adaptive Boost
-    Use["BDTG"]            = 0; // uses Gradient Boost
-    Use["BDTB"]            = 0; // uses Bagging
-    Use["BDTD"]            = 0; // decorrelation + Adaptive Boost
 
     std::cout << std::endl;
     std::cout << "==> Start TMVAClassificationApplication" << std::endl;
 
+    Float_t D_ptSIM, D_pt, D_mass, refMult, pi1_pt, k_pt, k_dca, pi1_dca, dcaDaughters, cosTheta, D_decayL, dcaD0ToPv, D_cosThetaStar, primary, diffRemovedPrimary, pid, hft, etas, tpc, mcEtas, weight;
+
     // --- Create the Reader object
     TMVA::Reader *reader = new TMVA::Reader( "!Color:!Silent" );
-    Float_t k_pt, pi1_pt, k_dca, pi1_dca, pi2_dca, dcaDaughters, cosTheta, D_decayL, dcaD0ToPv, primary, D_cosThetaStar, diffRemovedPrimary, pid;
     reader->AddVariable("k_dca", &k_dca );
     reader->AddVariable("pi1_dca", &pi1_dca );
     reader->AddVariable("dcaDaughters", &dcaDaughters );
-    reader->AddVariable("cosTheta", &cosTheta  );
+    reader->AddVariable("cosTheta", &cosTheta );
     reader->AddVariable("D_decayL", &D_decayL );
     reader->AddVariable("dcaD0ToPv", &dcaD0ToPv );
     reader->AddVariable("D_cosThetaStar", &D_cosThetaStar);
@@ -68,37 +67,41 @@ void TMVAClassificationApplicationSIM(TString output = "out_local_SIM.root", flo
     UInt_t nbin = 100;
     TH1F *histBdt(0);
     if (Use["BDT"]) histBdt = new TH1F("MVA_BDT","MVA_BDT", nbin, -1, 1 );
-//    if (Use["BDTD"]) histBdtD = new TH1F("MVA_BDTD","MVA_BDTD", nbin, -0.8, 0.8 );
-//    if (Use["BDTG"]) histBdtG = new TH1F("MVA_BDTG","MVA_BDTG", nbin, -1.0, 1.0 );
-
-    Float_t D_mass;
-    Float_t D_theta;
-    Float_t flag;
-    Float_t D_pt;
 
     std::vector<Float_t> vecVar(4); // vector for EvaluateMVA tests
 
     TStopwatch sw;
     sw.Start();
-    TNtuple* ntp_range = new TNtuple("ntp_signal", "ntp_signal", "D_mass:D_pt:BDTresponse:dcaD0ToPv:dcaDaughters:pid");
+    TNtuple* ntp_range = new TNtuple("ntp_signal", "ntp_signal", "D_mass:D_pt:D_ptSIM:BDTresponse:dcaD0ToPv:dcaDaughters:k_dca:pi1_dca:D_decayL:cosTheta:D_cosThetaStar:pid:hft:mcEtas:etas:tpc:k_pt:pi1_pt:refMult:weight");
 
     ntp->SetBranchAddress("k_pt", &k_pt);
     ntp->SetBranchAddress("pi1_pt", &pi1_pt);
     ntp->SetBranchAddress("k_dca", &k_dca);
     ntp->SetBranchAddress("pi1_dca", &pi1_dca);
-    ntp->SetBranchAddress("D_theta", &D_theta);
     ntp->SetBranchAddress("D_decayL", &D_decayL);
     ntp->SetBranchAddress("D_mass", &D_mass);
     ntp->SetBranchAddress("D_pt", &D_pt);
+    ntp->SetBranchAddress("D_ptSIM", &D_ptSIM);
     ntp->SetBranchAddress("dcaD0ToPv", &dcaD0ToPv);
     ntp->SetBranchAddress("cosTheta", &cosTheta);
     ntp->SetBranchAddress("dcaDaughters", &dcaDaughters);
     ntp->SetBranchAddress("pid", &pid);
+    ntp->SetBranchAddress("hft", &hft);
+    ntp->SetBranchAddress("mcEtas", &mcEtas);
+    ntp->SetBranchAddress("etas", &etas);
+    ntp->SetBranchAddress("tpc", &tpc);
+    ntp->SetBranchAddress("refMult", &refMult);
+    ntp->SetBranchAddress("weight", &weight);
+//        ntp[i]->SetBranchAddress("diffRemovedPrimary", &diffRemovedPrimary);
+    ntp->SetBranchAddress("D_cosThetaStar", &D_cosThetaStar);
+
+    const int nNtVars = ntp_range->GetNvar();
+    float ntVar[nNtVars];
 
     for (Long64_t ievt = 0; ievt < ntp->GetEntries(); ievt++) {
         if (ievt % 1000000 == 0) std::cout << "--- ... Processing signal, event: " << ievt << std::endl;
         ntp->GetEntry(ievt);
-        if (D_pt < ptmax && D_pt > ptmin) {
+        if (D_ptSIM < ptmax && D_ptSIM >= ptmin) {
 //            if  (k_pt>tmvaCuts::minPt && pi1_pt>tmvaCuts::minPt &&
 //                 D_decayL>tmvaCuts::decayLength && D_decayL<0.2 &&
 //                 dcaDaughters<tmvaCuts::dcaDaughters &&
@@ -110,7 +113,29 @@ void TMVAClassificationApplicationSIM(TString output = "out_local_SIM.root", flo
                 if (Use["BDT"]) {
                     float valueMVA = reader->EvaluateMVA("BDT method");
                     histBdt->Fill(valueMVA);
-                    ntp_range->Fill(D_mass, D_pt, valueMVA, dcaD0ToPv, dcaDaughters,pid);
+                    int ii = 0;
+                    ntVar[ii++]=D_mass;
+                    ntVar[ii++]=D_pt;
+                    ntVar[ii++]=D_ptSIM;
+                    ntVar[ii++]=valueMVA;
+                    ntVar[ii++]=dcaD0ToPv;
+                    ntVar[ii++]=dcaDaughters;
+                    ntVar[ii++]=k_dca;
+                    ntVar[ii++]=pi1_dca;
+                    ntVar[ii++]=D_decayL;
+                    ntVar[ii++]=cosTheta;
+                    ntVar[ii++]=D_cosThetaStar;
+                    ntVar[ii++]=pid;
+                    ntVar[ii++]=hft;
+                    ntVar[ii++]=mcEtas;
+                    ntVar[ii++]=etas;
+                    ntVar[ii++]=tpc;
+                    ntVar[ii++]=k_pt;
+                    ntVar[ii++]=pi1_pt;
+                    ntVar[ii++]=refMult;
+                    ntVar[ii++]=weight;
+
+                    ntp_range->Fill(ntVar);
                 }
 //            }
         }
@@ -122,7 +147,7 @@ void TMVAClassificationApplicationSIM(TString output = "out_local_SIM.root", flo
 
     Dplus_file->cd();
     histBdt->Write();
-    ntp_range->Write();
+    ntp_range->Write(ntp_range->GetName(), TObject::kOverwrite);
     Dplus_file->Close();
 
     delete reader;

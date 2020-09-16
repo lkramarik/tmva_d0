@@ -12,6 +12,7 @@
 #include "TEventList.h"
 #include "TFile.h"
 #include "TGraphErrors.h"
+#include "TPaveStats.h"
 #include "TMultiGraph.h"
 #include <iostream>
 #include <ctime>
@@ -24,7 +25,7 @@
 
 using namespace std;
 using namespace TMath;
-//ClassImp(FitD0Peak)
+ClassImp(FitD0Peak)
 
 FitD0Peak::FitD0Peak(TH1F* sigInput, TH1F* bckgInput, Float_t ptMinInput, Float_t ptMaxInput, TString mOutputFileName) : TObject(),
                    mSigma(999), mSigmaE(999), mMean(999), mMeanE(999), mHeight(999), mHeightE(999),
@@ -46,6 +47,8 @@ FitD0Peak::FitD0Peak(TH1F* sigInput, TH1F* bckgInput, Float_t ptMinInput, Float_
     bckgOrig->Rebin(10);
     bckgToWork->Rebin(10);
 
+    binSize=sigOrig->GetBinWidth(sigOrig->FindBin(1.864));
+
     fOut = new TFile(mOutputFileName,"recreate");
     text1 = new TPaveText(0.719,0.9229,0.998,0.980,"brNDC");
     text1->SetTextSize(0.04);
@@ -63,6 +66,9 @@ FitD0Peak::FitD0Peak(TH1F* sigInput, TH1F* bckgInput, Float_t ptMinInput, Float_
 
     sigSubtracted=(TH1F*)sigOrig->Clone(sigOrig->GetName());
     setHistoStyle(sigSubtracted, 9, 20);
+
+    mTupleSignal=new TNtuple();
+    mTupleBackground=new TNtuple();
 
 //    doStuff();
 
@@ -94,6 +100,7 @@ void FitD0Peak::doStuff(){
 
         plotPub();
         plotOrig();
+        plotPubWithResidual();
 //        ofstream yieldsF;
 //        yieldsF.open("raw_yields_fct.txt", std::ios::app);
 //        yieldsF<<ptMin<<" "<<ptMax<<" "<<integral_function_yield/binSize<<" "<<integral_function_yield_error/binSize<<endl;
@@ -139,10 +146,16 @@ void FitD0Peak::plotPub(){
     TCanvas *cP = new TCanvas("cPublish","cPublish",1200,1000);
     gStyle->SetOptStat(0);
     gPad->SetMargin(0.1,0.05,0.13,0.08);
-    gStyle->SetStatX(0.949833);
-    gStyle->SetStatY(0.920598);
+
     sigSubtracted->Draw();
+//    fun0->Draw("same");
     gStyle->SetOptFit(111);
+
+    TPaveStats *st = (TPaveStats*)sigSubtracted->FindObject("stats");
+    st->SetX1NDC(0.7); //new x start position
+    st->SetY1NDC(0.7); //new x end position
+    st->SetX2NDC(0.949833); //new x start position
+    st->SetY2NDC(0.920598); //new x end position
 
     TPaveText *textPub1 = new TPaveText(0.13,0.717,0.205,0.823,"brNDC");
     textPub1->SetTextSize(0.04);
@@ -157,7 +170,8 @@ void FitD0Peak::plotPub(){
 
     TLegend *legendPub = new TLegend(0.127,0.817, 0.287, 0.907,"","brNDC");
     legendPub->AddEntry(sigSubtracted, "US - LS", "pl");
-    legendPub->AddEntry(fun0, "Gaussian + linear fit", "pl");
+//    legendPub->AddEntry(fun0, "Gaussian + linear fit", "pl");
+    legendPub->AddEntry(sigSubtracted->GetFunction("fun0"), "Gaussian + linear fit", "pl");
     legendPub->SetFillStyle(0);
     legendPub->SetLineColor(0);
     legendPub->SetTextSize(0.04);
@@ -172,6 +186,73 @@ void FitD0Peak::plotPub(){
     delete cP;
     delete textPub1;
     delete legendPub;
+}
+
+//____________________________________________________________________________________________________________________________
+void FitD0Peak::plotPubWithResidual(){
+    TCanvas *cP = new TCanvas("cPublish1","cPublish1",1200,1000);
+    gPad->SetMargin(0.1,0.05,0.13,0.08);
+    gStyle->SetOptStat(0);
+
+    sigSubtractedResidualBckg->SetStats(0);
+    sigSubtractedResidualBckg->Draw();
+
+    sigSubtracted->Draw("same");
+//    gStyle->SetOptFit(111);
+
+    TPaveStats *st = (TPaveStats*)sigSubtracted->FindObject("stats");
+    st->SetOptFit(111);
+    st->SetX1NDC(0.7); //new x start position
+    st->SetY1NDC(0.7); //new x end position
+    st->SetX2NDC(0.949833); //new x start position
+    st->SetY2NDC(0.920598); //new x end position
+
+    TPaveText *textPub1 = new TPaveText(0.13,0.63,0.20,0.737,"brNDC");
+    textPub1->SetTextSize(0.03);
+    textPub1->SetLineColor(0);
+    textPub1->SetShadowColor(0);
+    textPub1->SetFillColor(0);
+    textPub1->SetTextFont(42);
+    textPub1->AddText(Form("Significance: %0.3g, S/B: %0.3g", significanceBins, SoverB));
+    textPub1->AddText(Form("Raw yield: %0.2g #pm %0.2g", rawYield, rawYieldError));
+    textPub1->SetTextAlign(12);
+    textPub1->Draw("same");
+
+    TF1 *resGaus = new TF1("resGaus","gaus(0)",mFitRMin,mFitRMax);
+    resGaus->SetParameters(fun0->GetParameter(2),fun0->GetParameter(3),fun0->GetParameter(4));
+    resGaus->SetLineColor(15);
+//    resGaus->SetLineStyle(9);
+    resGaus->Draw("same");
+
+    TF1 *resLinear = new TF1("resLinear","pol1",mFitRMin,mFitRMax);
+    resLinear->SetParameters(fun0->GetParameter(0),fun0->GetParameter(1));
+    resLinear->SetLineStyle(3);
+    resLinear->SetLineWidth(4);
+    resLinear->SetLineColor(1);
+    resLinear->Draw("same");
+
+
+    TLegend *legendPub = new TLegend(0.127,0.753, 0.287, 0.907,"","brNDC");
+    legendPub->AddEntry(sigSubtracted, "US - LS", "pl");
+    legendPub->AddEntry(sigSubtractedResidualBckg, "US - LS - residual", "pl");
+    legendPub->AddEntry(sigSubtracted->GetFunction("fun0"), "Gaussian + linear fit", "pl");
+    legendPub->AddEntry(resLinear, "Residual background (linear)", "pl");
+    legendPub->AddEntry(resGaus, "Gaussian peak", "pl");
+    legendPub->SetFillStyle(0);
+    legendPub->SetLineColor(0);
+    legendPub->SetTextSize(0.03);
+    legendPub->Draw("same");
+
+    tx2.DrawLatex(0.1,0.940,Form("p_{T}: %3.1f-%3.1f GeV/c", ptMin, ptMax));
+    text1->Draw("same");
+
+    fOut->cd();
+    cP->Write(Form("%.1f_%.1f_publ_peak",ptMin, ptMax));
+    cP->Close();
+    delete cP;
+    delete textPub1;
+    delete legendPub;
+    delete resGaus;
 }
 
 //____________________________________________________________________________________________________________________________
@@ -235,7 +316,6 @@ void FitD0Peak::fitFunction() {
 
     TF1 *funLS = new TF1("funLS","pol1(0)+gaus(2)", mFitRMin,mFitRMax);
     funLS->SetParameters(1.,-5.,1.,1.84,0.01);
-    funLS->SetLineColor(2);
 //    funLS->SetLineStyle(7);
     funLS->SetLineStyle(1);
     funLS->SetParName(0,"intercept");
@@ -257,7 +337,7 @@ void FitD0Peak::fitFunction() {
     flinLS->SetLineWidth(1);
     flinLS->SetLineColor(46);
 
-//    Double_t SLSError=fgausLS->IntegralError(funLS->GetParameter(3)-nsigma*funLS->GetParameter(4), funLS->GetParameter(3)+nsigma*funLS->GetParameter(4))
+//    Double_t SLSError=fgausLS->IntegralError(funLS->GetParameter(3)-nsigma*funLS->GetParameter(4), funLS->GetParameter(3)+nsigma*funLS->GetParameter(4));
     Double_t SLS=fgausLS->Integral(funLS->GetParameter(3)-nsigma*funLS->GetParameter(4), funLS->GetParameter(3)+nsigma*funLS->GetParameter(4))/binSize;
     Double_t SLSError=0;
 
@@ -268,12 +348,21 @@ void FitD0Peak::fitFunction() {
 
     TCanvas *c1 = new TCanvas("c1","c1",1200,900);
     gPad->SetMargin(0.1,0.05,0.13,0.08);
-//    gStyle->SetOptStat(0);
-    gStyle->SetOptFit();
+    gStyle->SetOptStat(0);
+//    gStyle->SetOptFit(111);
     gStyle->SetStatX(0.949833);
     gStyle->SetStatY(0.920598);
     histo->Draw();
-    gStyle->SetOptFit();
+    gStyle->SetOptFit(111);
+    gStyle->SetStatFontSize(6);
+
+    histo->GetFunction("funLS")->SetLineColor(46);
+
+    TPaveStats *st = (TPaveStats*)histo->FindObject("stats");
+    st->SetX1NDC(0.7); //new x start position
+    st->SetY1NDC(0.7); //new x end position
+    st->SetX2NDC(0.949833); //new x start position
+    st->SetY2NDC(0.920598); //new x end position
 
     TPaveText *textPub1 = new TPaveText(0.13,0.717,0.205,0.823,"brNDC");
     textPub1->SetTextSize(0.04);
@@ -289,7 +378,7 @@ void FitD0Peak::fitFunction() {
 
     TLegend *legendPub = new TLegend(0.127,0.817, 0.287, 0.907,"","brNDC");
     legendPub->AddEntry(histo, "Unlike-sign (US) signal", "pl");
-    legendPub->AddEntry(funLS, "Gaussian + linear fit", "pl");
+    legendPub->AddEntry(histo->GetFunction("funLS"), "Gaussian + linear fit", "pl");
     legendPub->SetFillStyle(0);
     legendPub->SetLineColor(0);
     legendPub->SetTextSize(0.04);
@@ -298,7 +387,9 @@ void FitD0Peak::fitFunction() {
 
     flinLS->Draw("same");
 //    fgausLS->Draw("same");
-    
+    tx2.DrawLatex(0.1,0.940,Form("p_{T}: %3.1f-%3.1f GeV/c", ptMin, ptMax));
+    text1->Draw("same");
+
     fOut->cd();
     c1->Write(Form("%.1f_%.1f_fit_fct", ptMin, ptMax));
     c1->Close();
@@ -355,9 +446,11 @@ void FitD0Peak::fitComeOn() {
 
     //residual backg subtraction
     sigSubtractedResidualBckg=(TH1F*)sigSubtracted->Clone(sigSubtracted->GetName());
+    setHistoStyle(sigSubtractedResidualBckg, 15, 20);
     sigSubtractedResidualBckg->Add(resLinear, -1);
 
     bckgAddedResidualBckg=(TH1F*)bckgToWork->Clone(bckgToWork->GetName());
+    setHistoStyle(bckgAddedResidualBckg, 15, 5);
     bckgAddedResidualBckg->Add(resLinear, 1);
 
     //Evaluation of significances and stuff:
@@ -383,6 +476,17 @@ void FitD0Peak::fitComeOn() {
     delete c1;
     delete resGaus;
     delete resLinear;
+}
+
+//____________________________________________________________________________________________________________________________
+void FitD0Peak::makeTupleCalculations(){
+    if (mTupleSignal==NULL || mTupleBackground==NULL) {
+        std::cout<<"tuple not specified. end."<<endl;
+        return;
+    }
+
+
+
 }
 
 //____________________________________________________________________________________________________________________________

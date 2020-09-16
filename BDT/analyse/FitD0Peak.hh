@@ -47,10 +47,15 @@ public:
     void setSigma(float);
     void setHeight(float);
     void addMixedEventBckg(TH1F*);
-
+    void setFitRange(float, float);
     void plotPub();
+    void plotPubWithResidual();
     void plotOrig();
     void doStuff();
+    void makeTupleCalculations();
+
+    void setTupleSignal(TNtuple*);
+    void setTupleBackground(TNtuple*);
 
     TH1F* sigOrig;
     TH1F* bckgOrig;
@@ -75,6 +80,9 @@ private:
     Float_t mFitRMax;
     Float_t ptMin;
     Float_t ptMax;
+
+    TNtuple* mTupleSignal;
+    TNtuple* mTupleBackground;
 
     bool scale;
 
@@ -103,6 +111,8 @@ private:
 
     TPaveText *text1;
 
+
+
 ClassDef(FitD0Peak,1)
 
 };
@@ -119,5 +129,9 @@ inline float FitD0Peak::getRawYieldError() {return rawYieldError;}
 inline void FitD0Peak::setMean(float a) {mMean = a;}
 inline void FitD0Peak::setSigma(float a) {mSigma = a;}
 inline void FitD0Peak::setHeight(float a) {mHeight = a;}
+inline void FitD0Peak::setFitRange(float min, float max) {mFitRMin=min; mFitRMax=max;}
+inline void FitD0Peak::setTupleSignal(TNtuple* nt) {mTupleSignal=nt;}
+inline void FitD0Peak::setTupleBackground(TNtuple* nt) {mTupleBackground=nt;}
+
 
 #endif
