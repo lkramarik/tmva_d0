@@ -41,6 +41,8 @@ public:
     float getSignificance();
     float getRawYield();
     float getRawYieldError();
+    float getRawYieldFit();
+    float getRawYieldFitError();
 
     void makeTuple(TString, TCut, bool);
     void setMean(float);
@@ -96,6 +98,9 @@ private:
     Double_t rawYieldError;
     Float_t rawYield;
 
+    Double_t  rawYieldFit;
+    Double_t  rawYieldFitError;
+
     bool lines;
     TLine* rightLine;
     TLine* leftLine;
@@ -125,6 +130,8 @@ inline float FitD0Peak::getSigmaError() {return mSigmaE;}
 inline float FitD0Peak::getSignificance() {return significanceBins;}
 inline float FitD0Peak::getRawYield() {return rawYield;}
 inline float FitD0Peak::getRawYieldError() {return rawYieldError;}
+inline float FitD0Peak::getRawYieldFit() {return rawYieldFit;}
+inline float FitD0Peak::getRawYieldFitError() {return rawYieldFitError;}
 
 inline void FitD0Peak::setMean(float a) {mMean = a;}
 inline void FitD0Peak::setSigma(float a) {mSigma = a;}

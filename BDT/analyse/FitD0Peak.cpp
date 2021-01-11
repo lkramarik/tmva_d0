@@ -29,7 +29,7 @@ ClassImp(FitD0Peak)
 
 FitD0Peak::FitD0Peak(TH1F* sigInput, TH1F* bckgInput, Float_t ptMinInput, Float_t ptMaxInput, TString mOutputFileName) : TObject(),
                    mSigma(999), mSigmaE(999), mMean(999), mMeanE(999), mHeight(999), mHeightE(999),
-                   significanceBins(999), SoverB(999), rawYieldError(999), rawYield(999),
+                   significanceBins(999), SoverB(999), rawYieldError(999), rawYield(999), rawYieldFit(999), rawYieldFitError(999),
                    mFitRMin(1.7), mFitRMax(2.0),
                    peakMin(1.82), peakMax(1.88),
                    nsigma(3), lines(false) {
@@ -339,12 +339,17 @@ void FitD0Peak::fitFunction() {
 
 //    Double_t SLSError=fgausLS->IntegralError(funLS->GetParameter(3)-nsigma*funLS->GetParameter(4), funLS->GetParameter(3)+nsigma*funLS->GetParameter(4));
     Double_t SLS=fgausLS->Integral(funLS->GetParameter(3)-nsigma*funLS->GetParameter(4), funLS->GetParameter(3)+nsigma*funLS->GetParameter(4))/binSize;
-    Double_t SLSError=0;
+    rawYieldFit=SLS;
 
     Double_t BLS=flinLS->Integral(funLS->GetParameter(3)-nsigma*funLS->GetParameter(4), funLS->GetParameter(3)+nsigma*funLS->GetParameter(4))/binSize;
     std::cout<<"Fitting without backround signal, background: "<<SLS<<" "<<BLS<<endl;
     Double_t signLS=abs(SLS)/sqrt(abs(SLS)+abs(2*BLS));
     std::cout<<"Significance: "<<signLS<<endl;
+
+    //TODO fit error should be here
+    Double_t SLSError=SLS/signLS;
+    rawYieldFitError=SLSError;
+
 
     TCanvas *c1 = new TCanvas("c1","c1",1200,900);
     gPad->SetMargin(0.1,0.05,0.13,0.08);
@@ -370,9 +375,9 @@ void FitD0Peak::fitFunction() {
     textPub1->SetShadowColor(0);
     textPub1->SetFillColor(0);
     textPub1->SetTextFont(42);
-    textPub1->AddText(Form("Significance: %0.3g, S/B: %0.3g", signLS, SLS/BLS));
-//    textPub1->AddText(Form("Raw yield: %0.2g #pm %0.2g", SLS, SLSError));
-    textPub1->AddText(Form("Raw yield: %0.2g", SLS));
+    textPub1->AddText(Form("Significance: %.3f, S/B: %.3f", signLS, SLS/BLS));
+    textPub1->AddText(Form("Raw yield: %.2f #pm %.2f", SLS, SLSError));
+//    textPub1->AddText(Form("Raw yield: %.1f ", SLS));
     textPub1->SetTextAlign(12);
     textPub1->Draw("same");
 
@@ -445,7 +450,9 @@ void FitD0Peak::fitComeOn() {
     rightLine->SetLineColor(46);
 
     //residual backg subtraction
-    sigSubtractedResidualBckg=(TH1F*)sigSubtracted->Clone(sigSubtracted->GetName());
+    TString nameSubtr = sigSubtracted->GetName();
+    nameSubtr=nameSubtr+"_subResBckg";
+    sigSubtractedResidualBckg=(TH1F*)sigSubtracted->Clone(nameSubtr);
     setHistoStyle(sigSubtractedResidualBckg, 15, 20);
     sigSubtractedResidualBckg->Add(resLinear, -1);
 

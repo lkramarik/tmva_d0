@@ -42,9 +42,9 @@ void testMake() {
 //    TString fileNameSuffix[] = {"nHitsFit15", "nHitsFit17", "nHitsFit20"};
 
     TString coeffHistoName[] = {""};
-    TString fileNameSuffix[] = {"TPCdata"};
+    TString fileNameSuffix[] = {"goodPid"};
 
-    TString folderTpcName[] = {"/home/lukas/work/embedding_dAu/analyse/tpc_eff/"};
+    TString folderTpcName[] = {"/home/lukas/work/embedding_dAu/analyse/tpc_eff_dca1/"};
 
 //    TString folderTpcName[] = {"/home/lukas/work/embedding_dAu/analyse/tpc_eff_nHitsFit15/", "/home/lukas/work/embedding_dAu/analyse/tpc_eff_nHitsFit17/", "/home/lukas/work/embedding_dAu/analyse/tpc_eff_nHitsFit20/"};
 
@@ -52,9 +52,9 @@ void testMake() {
 
     TString ntpFileName[] = {
 //                             "/home/lukas/work/tmva_d0/BDT/pt_2_3/n150_d3/out_local_SIM_ntpTMVA_full_D0.toyMc.1003.105perc.root",
-                             "/home/lukas/work/tmva_d0/BDT/pt_1_2/n100_d3/out_local_SIM_ntp_full_D0.toyMc.hijing.1407.weight.root",
-                             "/home/lukas/work/tmva_d0/BDT/pt_2_3/n150_d3/out_local_SIM_ntp_full_D0.toyMc.hijing.1407.weight.root",
-                             "/home/lukas/work/tmva_d0/BDT/pt_3_5/n400_d3/out_local_SIM_ntp_full_D0.toyMc.hijing.1407.weight.root"};
+                             "/home/lukas/work/tmva_d0/BDT/pt_1_2/n100_d3/out_local_SIM_ntp_full_D0.toyMc.data.0408.dca1cm.root",
+                             "/home/lukas/work/tmva_d0/BDT/pt_2_3/n150_d3/out_local_SIM_ntp_full_D0.toyMc.data.0408.dca1cm.root",
+                             "/home/lukas/work/tmva_d0/BDT/pt_3_5/n400_d3/out_local_SIM_ntp_full_D0.toyMc.data.0408.dca1cm.root"};
 
 //                                "/home/lukas/work/tmva_d0/BDT/pt_1_2/n100_d3/out_local_SIM_ntpTMVA_full_D0.toyMc.0303.root",
 //                             "/home/lukas/work/tmva_d0/BDT/pt_2_3/n150_d3/out_local_SIM_ntpTMVA_full_D0.toyMc.0303.root",
@@ -92,12 +92,31 @@ void makeEff(TString coeffHistoName, TString folderTpcName, TString ntpFileName,
     eff.setTpcGraphs();
     eff.setTofMatch(1);
 
+    //PIDs
+    int bbcMin=0;
+    int bbcMax=950;
+    int nTof=0;
+    float nsigma=3;
+    float tofInvBeta=0.03;
+    float ptTrackCut=0.;
+
+    TString name;
+//    TString cutComb=Form("bbc%i_%i_nHft%i_nsigma%.1f_tof%.2f_pt%.1f/",bbcMin, bbcMax, nTof, nsigma, tofInvBeta, ptTrackCut);
+//    name="/home/lukas/work/dmesons/Dmaker_ndAu/Dmaker_dAu/pidtest/tofPidEff_"+cutComb+"rootFiles/";
+
+    eff.setFolderTofPid("pid_files/bbc0_950_nHft-1_nsigma300.0_tof999.00_pt0.0/");
+    eff.setTofPid();
+
+//    name="/home/lukas/work/dmesons/Dmaker_ndAu/Dmaker_dAu/pidtest/tpc_"+cutComb+"rootFiles/";
+    eff.setFolderTpcPid("pid_files/bbc0_950_nHft0_nsigma3.0_tof0.03_pt0.0/");
+    eff.setTpcPid();
+
     if (eff.isTpcReconstructed("pion", 1, 0, 0.3)) cout<<"yes"<<endl;
     if (eff.isTofmatched("pion", 1, 0.3)) cout<<"yes"<<endl;
     else cout<<"no"<<endl;
 
 
-    /*
+
     // set input and output
     TFile *f  = new TFile(ntpFileName, "READ");
     auto* ntp = (TNtuple*)f->Get("ntp_signal");
@@ -123,10 +142,37 @@ void makeEff(TString coeffHistoName, TString folderTpcName, TString ntpFileName,
         if (!((iEvent + 1) % ((nEvents) / 5)))
             cout << "________ entries progress = " << iEvent*100 / static_cast<float>(nEvents) << "%" << endl;
 
-        float tpc=0;
+        float tpc=0., pid=0.;
+
         if(eff.isTpcReconstructed("pion", 1, 0, tEvent->pi1_pt) && eff.isTpcReconstructed("kaon", 1, 0, tEvent->k_pt)){
             tpc=1;
         }
+
+        //hybrid TOF
+        bool goodTofPion= false;
+        bool goodTofKaon= false;
+
+        if (eff.isTofmatched("pion", 0, tEvent->pi1_pt)){
+            if (eff.isTofPid("pion", tEvent->pi1_pt)) goodTofPion= true;
+            else goodTofPion= false;
+        }
+        else goodTofPion=true;
+
+        if (eff.isTofmatched("kaon", 0, tEvent->k_pt)){
+            if (eff.isTofPid("kaon", tEvent->k_pt)) goodTofKaon= true;
+            else goodTofKaon= false;
+        }
+        else goodTofKaon=true;
+
+        //TPC PID
+        bool goodTpcPidPion = false;
+        if (eff.isTpcPid("pion", tEvent->pi1_pt)) goodTpcPidPion = true;
+
+        bool goodTpcPidKaon = false;
+        if (eff.isTpcPid("kaon", tEvent->k_pt)) goodTpcPidKaon = true;
+
+        if (goodTofPion && goodTofKaon && goodTpcPidPion && goodTpcPidKaon) pid=1.;
+
 
         int ii = 0;
         //this stuf are not changing
@@ -141,7 +187,7 @@ void makeEff(TString coeffHistoName, TString folderTpcName, TString ntpFileName,
         ntVar[ii++]=tEvent->D_decayL;
         ntVar[ii++]=tEvent->cosTheta;
         ntVar[ii++]=tEvent->D_cosThetaStar;
-        ntVar[ii++]=tEvent->pid;
+        ntVar[ii++]=pid;
         ntVar[ii++]=tEvent->hft;
         ntVar[ii++]=tEvent->etas;
         ntVar[ii++]=tpc;
@@ -175,7 +221,7 @@ void makeEff(TString coeffHistoName, TString folderTpcName, TString ntpFileName,
 
     dataOu->Close();
     delete tEvent;
-    */
+
 
 
 }

@@ -418,6 +418,16 @@ void project_bdt_oneCut(Double_t ptmin, Double_t ptmax, Double_t nTrees, Double_
     grResults->GetYaxis()->SetLabelSize(0.04);
     grResults->GetXaxis()->SetTitleSize(0.045);
 
+    TGraphErrors* grResultsFit = new TGraphErrors();
+    grResultsFit->SetPoint(0, ptBin, fitmass->getRawYieldFit());
+    grResultsFit->SetPointError(0, 0, fitmass->getRawYieldFitError());
+    grResultsFit->SetMarkerColor(1);
+    grResultsFit->SetMarkerStyle(21);
+    grResultsFit->SetTitle("");
+    grResultsFit->GetXaxis()->SetLabelSize(0.04);
+    grResultsFit->GetYaxis()->SetLabelSize(0.04);
+    grResultsFit->GetXaxis()->SetTitleSize(0.045);
+
     TCut cutMass = Form("D_mass>%f && D_mass<%f", fitmass->getMean()-3*fitmass->getSigma(), fitmass->getMean()+3*fitmass->getSigma());
     setCuts+=cutMass;
 
@@ -435,6 +445,7 @@ void project_bdt_oneCut(Double_t ptmin, Double_t ptmax, Double_t nTrees, Double_
     delete fitmass;
 
     f->cd();
+    grResultsFit->Write("raw_yield_fit");
     grResults->Write("raw_yield");
 //    grResults->Write("significance");
     listOut->Write("hists_D_mass", 1, 0);
@@ -691,7 +702,7 @@ void plotTogether(Int_t nBins, Double_t *ptmin, Double_t *ptmax, Double_t *nTree
 //    TString axisName[] = {"Raw yield/#varepsilon_{BDT}"};
 
 //    TString names1[] = {"grInvYield", "grResultsRAA", "raw_yield"};
-    TString names1[] = {"grResultsRAA", "grInvYield", "raw_yield"};
+    TString names1[] = {"grResultsRAA", "grInvYield", "raw_yield", "raw_yield_fit"};
     TString axisName[] = {"R_{AA} = dAu/pp", "Invariant yield", "Raw yield"};
 
     const int ngraphsData = sizeof(names1) / sizeof(TString);
@@ -785,7 +796,7 @@ void plotTogetherSIM(Int_t nBins, Double_t *ptmin, Double_t *ptmax, Double_t *nT
     legend -> SetFillStyle(0);
     legend -> SetLineColor(0);
     legend -> SetTextSize(0.03);
-    for (unsigned short j = 0; j < graphsSIM.size(); ++j) {
+    for (unsigned short j = 1; j < graphsSIM.size()-2; ++j) {
         graphsSIM[j]->SetMarkerColor(colors[j]);
         graphsSIM[j]->SetMarkerStyle(2);
         graphsSIM[j]->SetMarkerSize(1.7);

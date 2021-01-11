@@ -58,15 +58,15 @@ void projectTopo() {
 //        topo->addNtpToCompare(ntpSim, "FastSim HIJING nonP goodE", "k_pt>0.15 && pi1_pt>0.15");
 
 //
-//        TString fileNameSim4 = Form("/home/lukas/work/tmva_d0/BDT/pt_%i_%i/n%i_d%i/out_local_SIM_ntp_FS_hijing_nonPrimary_DCA1cm.root", int(ptMin[i]), int(ptMax[i]), int(nTrees[i]), int(depth[i]) );
-//        auto* simF4 = new TFile(fileNameSim4 ,"r");
-//        auto* ntpSim4 = (TNtuple*)simF4 -> Get("ntp_signal");
-//        topo->addNtpToCompare(ntpSim4, "FastSim+HIJING", "k_pt>0.15 && pi1_pt>0.15");
+        TString fileNameSim4 = Form("/home/lukas/work/tmva_d0/BDT/pt_%i_%i/n%i_d%i/out_local_SIM_ntp_FS_hijing_nonPrimary_DCA1cm.root", int(ptMin[i]), int(ptMax[i]), int(nTrees[i]), int(depth[i]) );
+        auto* simF4 = new TFile(fileNameSim4 ,"r");
+        auto* ntpSim4 = (TNtuple*)simF4 -> Get("ntp_signal");
+        topo->addNtpToCompare(ntpSim4, "FastSim+HIJING", "k_pt>0.15 && pi1_pt>0.15");
 
-//        TString fileNameSimaf = Form("/home/lukas/work/tmva_d0/BDT/pt_%i_%i/n%i_d%i/out_local_SIM_ntp_FS_hijing_nonPrimary_DCA1cm_recoEvent_D0weightsHJ.root", int(ptMin[i]), int(ptMax[i]), int(nTrees[i]), int(depth[i]) );
-//        auto* simaf = new TFile(fileNameSimaf ,"r");
-//        auto* ntpSimaf = (TNtuple*)simaf -> Get("ntp_signal");
-//        topo->addNtpToCompare(ntpSimaf, "FastSim+HIJING D0 weight", "k_pt>0.15 && pi1_pt>0.15");
+        TString fileNameSimaf = Form("/home/lukas/work/tmva_d0/BDT/pt_%i_%i/n%i_d%i/out_local_SIM_ntp_FS_hijing_nonPrimary_DCA1cm_recoEvent_D0weightsHJ.root", int(ptMin[i]), int(ptMax[i]), int(nTrees[i]), int(depth[i]) );
+        auto* simaf = new TFile(fileNameSimaf ,"r");
+        auto* ntpSimaf = (TNtuple*)simaf -> Get("ntp_signal");
+        topo->addNtpToCompare(ntpSimaf, "FastSim+HIJING D^{0} weight", "k_pt>0.15 && pi1_pt>0.15");
 //
 //        TString fileNameSimS = Form("/home/lukas/work/tmva_d0/BDT/pt_%i_%i/n%i_d%i/out_local_SIM_ntp_full_D0.toyMc.dca1cm.HIJING.0608.weight.root", int(ptMin[i]), int(ptMax[i]), int(nTrees[i]), int(depth[i]) );
 //        auto* simS = new TFile(fileNameSimS ,"r");
@@ -84,22 +84,22 @@ void projectTopo() {
 //        auto* ntpSim3 = (TNtuple*)simF3 -> Get("ntp_signal");
 //        topo->addNtpToCompare(ntpSim3, "HIJING All", "k_pt>0.15 && pi1_pt>0.15");
 
-        TString fileNameSim34 = Form("/home/lukas/work/tmva_d0/BDT/pt_%i_%i/n%i_d%i/out_local_SIM_ntp_fullEvent_full_production.vtx.3M.1308.recoVertexD0.root", int(ptMin[i]), int(ptMax[i]), int(nTrees[i]), int(depth[i]) );
-        auto* simF34 = new TFile(fileNameSim34 ,"r");
-        auto* ntpSim34 = (TNtuple*)simF34 -> Get("ntp_signal");
-        topo->addNtpToCompare(ntpSim34, "HIJING refMult<15", "k_pt>0.15 && pi1_pt>0.15 && refMult<15");
-
-
-
-        TString fileNameSim345 = Form("/home/lukas/work/tmva_d0/BDT/pt_%i_%i/n%i_d%i/out_local_SIM_ntp_fullEvent_full_production.vtx.3M.1308.recoVertexD0.root", int(ptMin[i]), int(ptMax[i]), int(nTrees[i]), int(depth[i]) );
-        auto* simF345 = new TFile(fileNameSim345 ,"r");
-        auto* ntpSim345 = (TNtuple*)simF345 -> Get("ntp_signal");
-        topo->addNtpToCompare(ntpSim345, "HIJING refMult>20", "k_pt>0.15 && pi1_pt>0.15 && refMult>20");
-
-        TString fileNameSim345a = Form("/home/lukas/work/tmva_d0/BDT/pt_%i_%i/n%i_d%i/out_local_SIM_ntp_fullEvent_full_production.vtx.3M.1308.recoVertexD0.root", int(ptMin[i]), int(ptMax[i]), int(nTrees[i]), int(depth[i]) );
-        auto* simF345a = new TFile(fileNameSim345a ,"r");
-        auto* ntpSim345a = (TNtuple*)simF345a -> Get("ntp_signal");
-        topo->addNtpToCompare(ntpSim345a, "HIJING 15<refMult<20", "k_pt>0.15 && pi1_pt>0.15 && refMult>15 && refMult<20");
+//        TString fileNameSim34 = Form("/home/lukas/work/tmva_d0/BDT/pt_%i_%i/n%i_d%i/out_local_SIM_ntp_fullEvent_full_production.vtx.3M.1308.recoVertexD0.root", int(ptMin[i]), int(ptMax[i]), int(nTrees[i]), int(depth[i]) );
+//        auto* simF34 = new TFile(fileNameSim34 ,"r");
+//        auto* ntpSim34 = (TNtuple*)simF34 -> Get("ntp_signal");
+//        topo->addNtpToCompare(ntpSim34, "HIJING refMult<15", "k_pt>0.15 && pi1_pt>0.15 && refMult<15");
+//
+//
+//
+//        TString fileNameSim345 = Form("/home/lukas/work/tmva_d0/BDT/pt_%i_%i/n%i_d%i/out_local_SIM_ntp_fullEvent_full_production.vtx.3M.1308.recoVertexD0.root", int(ptMin[i]), int(ptMax[i]), int(nTrees[i]), int(depth[i]) );
+//        auto* simF345 = new TFile(fileNameSim345 ,"r");
+//        auto* ntpSim345 = (TNtuple*)simF345 -> Get("ntp_signal");
+//        topo->addNtpToCompare(ntpSim345, "HIJING refMult>20", "k_pt>0.15 && pi1_pt>0.15 && refMult>20");
+//
+//        TString fileNameSim345a = Form("/home/lukas/work/tmva_d0/BDT/pt_%i_%i/n%i_d%i/out_local_SIM_ntp_fullEvent_full_production.vtx.3M.1308.recoVertexD0.root", int(ptMin[i]), int(ptMax[i]), int(nTrees[i]), int(depth[i]) );
+//        auto* simF345a = new TFile(fileNameSim345a ,"r");
+//        auto* ntpSim345a = (TNtuple*)simF345a -> Get("ntp_signal");
+//        topo->addNtpToCompare(ntpSim345a, "HIJING 15<refMult<20", "k_pt>0.15 && pi1_pt>0.15 && refMult>15 && refMult<20");
 
 
 

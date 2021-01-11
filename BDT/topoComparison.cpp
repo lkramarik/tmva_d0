@@ -166,6 +166,7 @@ void topoComparison::project() {
 
         for (unsigned int i = 0; i < mTuples.size(); ++i) {
             mHists[i]->GetYaxis()->SetRangeUser(0.9*min, max*1.1);
+            if (min==0) mHists[i]->GetYaxis()->SetRangeUser(0.01, max*1.1);
             if (i==0) mHists[i]->Draw(); else mHists[i]->Draw("same");
         }
 
