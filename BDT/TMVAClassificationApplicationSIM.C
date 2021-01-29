@@ -91,7 +91,8 @@ void TMVAClassificationApplicationSIM(TString input = "/home/lukas/work/sim/tupl
     ntp->SetBranchAddress("etas", &etas);
     ntp->SetBranchAddress("tpc", &tpc);
     ntp->SetBranchAddress("refMult", &refMult);
-    ntp->SetBranchAddress("weight", &weight);
+    Int_t weightOk = ntp->SetBranchAddress("weight", &weight);
+    cout<<"weight is ok? "<<weightOk<<endl;
 //        ntp[i]->SetBranchAddress("diffRemovedPrimary", &diffRemovedPrimary);
     ntp->SetBranchAddress("D_cosThetaStar", &D_cosThetaStar);
 
@@ -133,7 +134,8 @@ void TMVAClassificationApplicationSIM(TString input = "/home/lukas/work/sim/tupl
                     ntVar[ii++]=k_pt;
                     ntVar[ii++]=pi1_pt;
                     ntVar[ii++]=refMult;
-                    ntVar[ii++]=weight;
+                    if (weightOk==0) ntVar[ii++]=weight;
+                    else ntVar[ii++]=-10;
 
                     ntp_range->Fill(ntVar);
                 }

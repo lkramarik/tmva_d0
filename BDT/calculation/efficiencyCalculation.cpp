@@ -64,7 +64,6 @@ void efficiencyCalculation::setTpcGraphs() {
         hTpcKPlus[iCent]->SetDirectory(0);
         hTpcKMinus[iCent] = (TH1D*)fTpcKMinus.Get(hName);
         hTpcKMinus[iCent]->SetDirectory(0);
-        hTpcPiPlus[iCent]->Draw();
     }
 
     fTpcPiPlus.Close();
@@ -100,7 +99,7 @@ bool efficiencyCalculation::isTpcReconstructed(TString particle, float charge, i
 
 //____________________________________________________________________________________
 void efficiencyCalculation::setTofMatch(int nsigma=1) {
-    TFile* fTofMatch=new TFile(mFolderTofMatch+"tofMatchEfficiency.root", "READ");
+    TFile* fTofMatch=new TFile(mFolderTofMatch, "READ");
     if (!fTofMatch) return;
     cout<<"TOF matching file loaded."<<endl;
 
@@ -137,11 +136,8 @@ bool efficiencyCalculation::isTofmatched(TString particle, float charge, float p
 
 //____________________________________________________________________________________
 void efficiencyCalculation::setTofPid() {
-    TFile* fileTofPidKaon=new TFile(mFolderTofPid+"tofPidEff_K.root", "READ");
-    TFile* fileTofPidPion=new TFile(mFolderTofPid+"tofPidEff_pi.root", "READ");
-
-//    TFile* fileTofPidKaon=new TFile(mFolderTofPid+"results_KK.root", "READ");
-//    TFile* fileTofPidPion=new TFile(mFolderTofPid+"results_pipi.root", "READ");
+    TFile* fileTofPidKaon=new TFile(mFolderTofPid+"/f_tofPidEff_K.root", "READ");
+    TFile* fileTofPidPion=new TFile(mFolderTofPid+"/f_tofPidEff_pi.root", "READ");
 
     if (!fileTofPidKaon || !fileTofPidPion) {
         cout<<"one of tof pid files not loaded."<<endl;
@@ -149,33 +145,8 @@ void efficiencyCalculation::setTofPid() {
     }
 
 
-    mfTofPidPion = (TF1*) fileTofPidPion->Get("f_tofPidEff_pi");
-    mfTofPidKaon = (TF1*) fileTofPidKaon->Get("f_tofPidEff_K");
-
-    //    TGraphErrors *gPion = (TGraphErrors*) fileTofPidPion->Get("eff");
-//    TGraphErrors *gKaon = (TGraphErrors*) fileTofPidKaon->Get("eff");
-
-    /*
-    mfTofPidPion = new TF1("tof_pif_fit_pion", "[0]+[1]/x+[2]*x+[3]/x/x", 0.15, 5);
-    mfTofPidPion->SetParameters(1, -0.06, -0.1, 0.02, 0.006);
-    mfTofPidPion->SetParLimits(0, 0, 1);
-    mfTofPidPion->SetParLimits(1, 0, 1);
-    mfTofPidPion->SetParLimits(2, 0, 1);
-    mfTofPidPion->SetParLimits(3, -1, 0);
-    TCanvas* canPionFit=new TCanvas("cPionTof", "cPionTof", 1000, 1000);
-    gPion->Fit(mfTofPidPion, "REX0W");
-    gPion->Draw("ap");
-
-    mfTofPidKaon = new TF1("tof_pif_fit_kaon", "[0]+[1]/x+[2]*x+[3]/x/x", 0.15, 5);
-    mfTofPidKaon->SetParameters(1, -0.06, -0.1, 0.02, 0.006);
-
-    TCanvas* canKaonFit=new TCanvas("cKaonFit", "cKaonFit", 1000, 1000);
-    gKaon->Fit(mfTofPidKaon, "REX0W");
-    gKaon->Draw("ap");
-
-    fileTofPidKaon->Close();
-    fileTofPidPion->Close();
-    */
+    mfTofPidPion = (TF1*) fileTofPidPion->Get("f_f_tofPidEff_pi");
+    mfTofPidKaon = (TF1*) fileTofPidKaon->Get("f_f_tofPidEff_K");
 
     mTofPidSet = true;
 
@@ -184,48 +155,20 @@ void efficiencyCalculation::setTofPid() {
 
 //____________________________________________________________________________________
 void efficiencyCalculation::setTpcPid() {
-    TFile* fileKaon=new TFile(mFolderTpcPid+"tpc_K.root", "READ");
-    TFile* filePion=new TFile(mFolderTpcPid+"tpc_pi.root", "READ");
+    TFile* fileKaon=new TFile(mFolderTpcPid+"/f_tpc_K.root", "READ");
+    TFile* filePion=new TFile(mFolderTpcPid+"/f_tpc_pi.root", "READ");
     if (!fileKaon || !filePion) {
         cout<<"one of tof pid files not loaded."<<endl;
         return;
     }
 
-    mfTpcPidPion = (TF1*) filePion->Get("f_tpc_pi");
-    mfTpcPidKaon = (TF1*) fileKaon->Get("f_tpc_K");
+    mfTpcPidPion = (TF1*) filePion->Get("f_f_tpc_pi");
+//    mfTpcPidPion->SetDirectory(0);
+    mfTpcPidKaon = (TF1*) fileKaon->Get("f_f_tpc_K");
+//    mfTpcPidKaon->SetDirectory(0);
 
-
-    /*
-//    TGraphErrors *gPion = (TGraphErrors*) filePion->Get("eff");
-//    TGraphErrors *gKaon = (TGraphErrors*) fileKaon->Get("eff");
-
-    mfTpcPidPion = new TF1("tpc_pif_fit_pion", "[0]+[1]/x+[2]*x+[3]/x/x", 0.15, 5);
-    mfTpcPidPion->SetParameters(1, -0.06, -0.1, 0.02, 0.006);
-    mfTpcPidPion->SetParLimits(0, 0, 1);
-    mfTpcPidPion->SetParLimits(1, 0, 1);
-    mfTpcPidPion->SetParLimits(2, 0, 1);
-    mfTpcPidPion->SetParLimits(3, -1, 0);
-    TCanvas* canPionFit=new TCanvas("cPionTof", "cPionTof", 1000, 1000);
-    gPion->Fit(mfTpcPidPion, "REX0W");
-    gPion->Draw("ap");
-
-    mOutFileTpcPidPion->cd();
-    mfTpcPidPion->Write();
-
-    mfTpcPidKaon = new TF1("tpc_pif_fit_kaon", "[0]+[1]/x+[2]*x+[3]/x/x", 0.15, 5);
-    mfTpcPidKaon->SetParameters(1, -0.06, -0.1, 0.02, 0.006);
-
-    TCanvas* canKaonFit=new TCanvas("cKaonFit", "cKaonFit", 1000, 1000);
-    gKaon->Fit(mfTpcPidKaon, "REX0W");
-    gKaon->Draw("ap");
-    mOutFileTpcPidKaon->cd();
-    mfTpcPidKaon->Write();
-
-
-    fileKaon->Close();
-    filePion->Close();
-    */
-
+//    fileKaon->Close();
+//    filePion->Close();
     mTpcPidSet = true;
     return;
 }

@@ -2,9 +2,10 @@
 #include "/home/lukas/work/tmva_d0/BDT/analysisSetup.h"
 
 void plotTogetherEfficiencyCompare(TString input,
-        const Int_t nBins,
-        Double_t ptmin,
-        Double_t ptmax){
+                                   const Int_t nBins,
+                                   Double_t ptmin,
+                                   Double_t ptmax,
+                                   Int_t anaSetup){
 
     gROOT->ProcessLine(".L analyse/FitD0Peak.cpp+");
     setCurrentFolder(input);
@@ -15,10 +16,21 @@ void plotTogetherEfficiencyCompare(TString input,
     Double_t depth[nBins];
     Double_t bdtResponse[nBins];
 
-    Double_t ptstep = (ptmax-ptmin)/(float)nBins;
-    for (int j = 0; j < nBins; ++j) {
-        ptMin[j] = 1+j*ptstep;
-        ptMax[j] = 1+(j+1)*ptstep;
+    if (anaSetup==1){
+        for (int iPtAnalysis = 0; iPtAnalysis < analysisSetup::nPtBins; ++iPtAnalysis) {
+            ptMin[iPtAnalysis] = analysisSetup::ptBinMin[iPtAnalysis];
+            ptMax[iPtAnalysis] = analysisSetup::ptBinMax[iPtAnalysis];
+            bdtResponse[iPtAnalysis] = analysisSetup::bdtCut[iPtAnalysis];
+            depth[iPtAnalysis] = analysisSetup::maxDepth[iPtAnalysis];
+            nTrees[iPtAnalysis] = analysisSetup::nTrees[iPtAnalysis];
+        }
+    }
+    else {
+        Double_t ptstep = (ptmax - ptmin) / (float) nBins;
+        for (int j = 0; j < nBins; ++j) {
+            ptMin[j] = 1 + j * ptstep;
+            ptMax[j] = 1 + (j + 1) * ptstep;
+        }
     }
 
     cout<<analysisSetup::nPtBins<<endl;

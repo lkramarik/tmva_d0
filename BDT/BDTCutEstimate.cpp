@@ -475,12 +475,12 @@ void project_bdt_oneCut_SIM(Double_t ptmin, Double_t ptmax, Double_t nTrees, Dou
     TCut pTCut = Form("D_ptSIM>=%.3f && D_ptSIM<%.3f", ptmin, ptmax);
     setCuts+=pTCut;
 
-    Long64_t nAllSim=ntp->GetEntries(setCuts*weight); //all from simu
-
-//    setCuts+="k_pt>0.15 && pi1_pt>0.15 && etas>0";
 //    Long64_t nAllSim=ntp->GetEntries(setCuts*weight); //all from simu
 
-    setCuts+="k_pt>0.15 && pi1_pt>0.15";
+    setCuts+="k_pt>0.15 && pi1_pt>0.15 && etas>0";
+    Long64_t nAllSim=ntp->GetEntries(setCuts*weight); //all from simu
+
+    setCuts+="k_pt>0.15 && pi1_pt>0.15 && etas>0";
     Long64_t nAcc=ntp->GetEntries(setCuts*weight);
 
     setCuts+="tpc>0";
