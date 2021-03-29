@@ -88,7 +88,7 @@ void TMVAClassificationApplication( const char* inputF = "./../../files_to_run.l
 
     TStopwatch sw;
     sw.Start();
-    TString vars="D_mass:D_pt:BDTresponse:dcaD0ToPv:dcaDaughters:primary:refMult:k_dca:pi1_dca:cosTheta:D_cosThetaStar:D_decayL";
+    TString vars="D_mass:D_pt:BDTresponse:dcaD0ToPv:dcaDaughters:primary:refMult:k_dca:pi1_dca:cosTheta:D_cosThetaStar:D_decayL:precuts";
     TNtuple* ntp_range[2] = {new TNtuple("ntp_signal", "ntp_signal", vars), new TNtuple("ntp_background", "ntp_background", vars)};
 
     float hodnoty[4] = {0};
@@ -110,25 +110,30 @@ void TMVAClassificationApplication( const char* inputF = "./../../files_to_run.l
 
 //        for (Long64_t ievt = 0; ievt < 10000; ievt++) {
         for (Long64_t ievt = 0; ievt < ntp[i]->GetEntries(); ievt++) {
+            float valueMVA=0., precuts=0.;
             if (ievt % 1000000 == 0 && i == 0) std::cout << "--- ... Processing signal, event: " << ievt << std::endl;
             if (ievt % 1000000 == 0 && i == 1) std::cout << "--- ... Processing background, event: " << ievt << std::endl;
             ntp[i]->GetEntry(ievt);
-            if (D_pt < ptmax && D_pt > ptmin) {
+
+            if (D_pt < ptmax && D_pt >= ptmin) {
                 if  (k_pt>tmvaCuts::minPt && pi1_pt>tmvaCuts::minPt &&
                      D_decayL>tmvaCuts::decayLength && D_decayL<0.2 &&
                      dcaDaughters<tmvaCuts::dcaDaughters &&
-                     k_dca>tmvaCuts::kDca && k_dca<0.2 &&
-                     pi1_dca>tmvaCuts::pDca && pi1_dca<0.2 &&
+                     k_dca>tmvaCuts::kDca && k_dca<1. &&
+                     pi1_dca>tmvaCuts::pDca && pi1_dca<1. &&
                      dcaD0ToPv < tmvaCuts::dcaV0ToPv &&
                      cosTheta > tmvaCuts::cosTheta) {
+                    precuts=1.;
+                }
 
                     if (Use["BDT"]) {
-                        float valueMVA = reader->EvaluateMVA("BDT method");
+                        valueMVA = reader->EvaluateMVA("BDT method");
                         histBdt->Fill(valueMVA);
-                        ntp_range[i]->Fill(D_mass, D_pt, valueMVA, dcaD0ToPv, dcaDaughters, primary, refMult, k_dca, pi1_dca, cosTheta, D_cosThetaStar, D_decayL);
-//                        ntp_range[i]->Fill(D_mass, D_pt, valueMVA, dcaD0ToPv, dcaDaughters, primary, diffRemovedPrimary);
                     }
-                }
+
+                ntp_range[i]->Fill(D_mass, D_pt, valueMVA, dcaD0ToPv, dcaDaughters, primary, refMult, k_dca, pi1_dca, cosTheta, D_cosThetaStar, D_decayL, precuts);
+//                        ntp_range[i]->Fill(D_mass, D_pt, valueMVA, dcaD0ToPv, dcaDaughters, primary, diffRemovedPrimary);
+
             }
         }
     }

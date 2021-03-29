@@ -42,32 +42,25 @@ void testMake() {
 //    TString fileNameSuffix[] = {"nHitsFit15", "nHitsFit17", "nHitsFit20"};
 
     TString coeffHistoName[] = {""};
-    TString fileNameSuffix[] = {"goodPid"};
+    TString fileNameSuffix[] = {"goodPid_dca1"};
 
     TString folderTpcName[] = {"/home/lukas/work/embedding_dAu/analyse/tpc_eff_dca1/"};
+//    TString folderTpcName[] = {"/home/lukas/work/embedding_dAu/analyse/tpc_eff_dca15/"};
 
-    TString bdtFolder[] = {"/home/lukas/work/tmva_d0/BDT/pt_1_2/n100_d3/out_local_SIM_",
+    TString bdtFolder[] = {"/home/lukas/work/tmva_d0/BDT/pt_1_2/n150_d3/out_local_SIM_",
                            "/home/lukas/work/tmva_d0/BDT/pt_2_3/n150_d3/out_local_SIM_",
                            "/home/lukas/work/tmva_d0/BDT/pt_3_5/n400_d3/out_local_SIM_"};
 
-//    TString inputPlot[] = {"ntp_FS_hijing_goodEvent_hotspot_1401.root",
-//                           "ntp_FS_hijing_goodevent_1401.root"};
 
-    TString inputPlot[] = {"ntp_fullEvent_full_production.vtx.3M.1308.goodEvent.root",
-                           "ntp_fullEvent_full_production.vtx.3M.1308.goodEvent.hotspot.root",
-                           "ntp.FS.1cm.all.newE.1509.root",
-                           "ntp.FS.data.hft2tof2.global.3009.root",
-                           "ntp.FS.1cm.primaries.newE.1509.root",
-                           "ntp.FS.hft2.global.1multEdge.0810.root",
-                           "ntp.FS.hft2.global.4multEdge.0810.root",
-                           "ntp_FS_hijing_goodEvent_hotspot_1401.root",
-                           "ntp_FS_hijing_goodevent_1401.root"};
+    TString inputPlot[] = {"ntp_FS_data_primaries_HS_dca1_0302.root",
+                           "ntp_FS_data_global_HS_dca1_0302.root"};
+
 
     std::vector<TString> ntpFileName;
 
     int nFiles=0;
     for (int i = 0; i < 3; ++i) {
-        for (int j = 0; j < 9; ++j) {
+        for (int j = 0; j < 2; ++j) {
             ntpFileName.push_back(bdtFolder[i]+inputPlot[j]);
             nFiles++;
         }
@@ -125,7 +118,7 @@ void makeEff(TString coeffHistoName, TString folderTpcName, TString ntpFileName,
 
     // set input and output
     TFile *f  = new TFile(ntpFileName, "READ");
-    auto* ntp = (TNtuple*)f->Get("ntp_signal");
+    auto* ntp = (TTree*)f->Get("ntp_signal");
 
     ntpFastSimBDT* tEvent = new ntpFastSimBDT(ntp);
     long int nEvents = tEvent->fChain->GetEntries();

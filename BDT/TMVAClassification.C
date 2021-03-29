@@ -20,16 +20,10 @@
 #include "tmvaCuts.h"
 #include<fstream>
 using namespace std;
-using tmvaCuts::PtBins;
-using tmvaCuts::totalNumberOfEvents;
 
 void TMVAClassification(float ptmin = 2, float ptmax = 3, float nTrees = 350, float treeDepth = 4) {
-//   TString inputSignalStr = "/home/lukas/work/tmva_d0/sim/ntpTMVA_D0.toyMc.Large.root";
-//   TString inputSignalStr = "/home/lukas/work/tmva_d0/sim/ntpTMVA_D0.toyMc_veryLarge.root";
-   TString inputSignalStr = "/home/lukas/work/tmva_d0/sim/ntpTMVA_D0.toyMC.0910.root";
-//   TString inputSignalStr = "/home/lukas/work/tmva_d0/sim/ntpTMVA_D0.toyMc.1605.root";
-//   TString inputSignalStr = "/home/lukas/work/tmva_d0/sim/ntpTMVA_D0.toyMc_veryLarge_Dete.root";
-//   TString inputSignalStr = "/gpfs01/star/pwg/lkramarik/tmva_d0/sim/ntpTMVA_D0.toyMc.Large.root";
+   TString inputSignalStr = "/home/lukas/work/tmva_d0/sim/ntp_FS_data_global_HS_dca1_0302.root";
+
     cout<<ptmin<<" "<<ptmax<<endl;
     const char* inputF = "./../../files_to_run.list";
    TMVA::Tools::Instance();
@@ -97,12 +91,21 @@ void TMVAClassification(float ptmin = 2, float ptmax = 3, float nTrees = 350, fl
    dataloader->AddSignalTree(signal, signalWeight);
 
    int nEntriesSignalTree = signal->GetEntries();
-   int const totalNumberOfEvents = 120e6;
+   int const totalNumberOfEvents = 100e6;
    TH1F*  hMcPt = (TH1F*)inputSignal->Get("hMcPt");
 //   TTree *signal_data = (TTree *) inputBackground->Get("ntp_signal");
 
    int const nOriginalSignalEntriesMCPt = hMcPt->Integral(hMcPt->FindBin(ptmin),hMcPt->FindBin(ptmax)); // Number of simulated D0/D0bar in this pT bin before efficiency
    int const nOriginalSignalEntries = nOriginalSignalEntriesMCPt; // Number of simulated D0/D0bar in this pT bin before efficiency
+
+
+//    Float_t invYield=7.5*f1D0pp->Eval(pT)*0.61/42;//12: 0.4639 7: 0.4893//  10 is for nBin, 50 is just how it is saved...
+//    NSig = 2*TMath::Pi()*pT*dpT*dy*2*invYield*nevt*BR*eff;
+//    TString signalWeightExpression = TString::Format("7.5*weight*2.*3.14*D_pt*(%f)*2.*2.*0.0389)",
+//                                                     ptmax-ptmin,
+//                                                     (float)totalNumberOfEvents,
+//                                                     (float)nOriginalSignalEntries,
+//                                                     );
 
 //   TString signalWeightExpression = TString::Format("1*weight*((%f/%f)*0.8*2.*3.14*D_pt*2*(%f)*2.*exp(-1.45-1.73*D_pt)*0.0389)", (float)totalNumberOfEvents, (float)nOriginalSignalEntries, ptmax-ptmin);
 //   TString signalWeightExpression = TString::Format("((%f/%f)*0.8*2.*3.14*D_pt*2*(%f)*2.*exp(-1.45-1.73*D_pt))", (float)totalNumberOfEvents, (float)nOriginalSignalEntries, ptmax-ptmin);

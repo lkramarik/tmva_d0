@@ -33,6 +33,7 @@
 #include "TLatex.h"
 #include "TNtuple.h"
 #include "TGraphErrors.h"
+#include "TGraphAsymmErrors.h"
 #include "TCanvas.h"
 #include "TCut.h"
 #include "TLegend.h"
@@ -63,6 +64,7 @@ void plotTogether(Int_t, Double_t *, Double_t *, Double_t *, Double_t *, Double_
 void plotTogetherSIM(Int_t, Double_t *, Double_t *, Double_t *, Double_t *, Double_t *);
 void drawSignificanceData(Int_t, Double_t *, Double_t *, Double_t *, Double_t *, Double_t *);
 float ratioError(float, float);
+TGraphErrors* ratioErrorGraph(float ratioUp, float ratioDown, Float_t ptBin, Float_t ptBinWidth);
 
 void setCurrentFolder(TString);
 
@@ -157,7 +159,7 @@ Double_t doSignificance(double ptmin, double ptmax, int nTrees, int maxDepth) {
 
     }
 
-    hPurity->Draw("same");
+//    hPurity->Draw("same");
 
     Float_t rightmax = 1.1*hSign->GetMaximum();
     Float_t scale = gPad->GetUymax()/rightmax;
@@ -262,9 +264,10 @@ Double_t doSignificance(double ptmin, double ptmax, int nTrees, int maxDepth) {
 //___________________________________________________________________________________
 void estimateNsigNbckg(Double_t ptmin, Double_t ptmax){
     Double_t dpT=ptmax-ptmin;
+    double_t ptError=dpT/2.;
     Double_t pT=(ptmin+ptmax)/2;
     Double_t dy=2;
-    Double_t nevt = 93e6;
+    Double_t nevt = 90e6;
     Double_t BR=0.0395;
 
     auto *fppSys = new TFile("out_ppsys.root","READ");
@@ -272,20 +275,20 @@ void estimateNsigNbckg(Double_t ptmin, Double_t ptmax){
     cout<<f1D0pp->Eval(1.5)<<" "<<f1D0pp->Eval(2.5)<<" "<<f1D0pp->Eval(4)<<endl;
     fppSys->Close();
 
-    Double_t massMin=1.76;
-    Double_t massMax=1.96;
+    Double_t massMin=1.81; //3sigma
+    Double_t massMax=1.90;
 
-    if (ptmin>2.9) {
-        massMin=1.;
-        massMax=3.;
-    }
+//    if (ptmin>2.9) {
+//        massMin=1.;
+//        massMax=3.;
+//    }
 
     TCut massCut = Form("D_mass >= %1.2f && D_mass < %1.2f", massMin, massMax);
     TCut mycuts = Form("D_pt>=%1.2f && D_pt<%1.2f && k_pt>%1.2f && pi1_pt>%1.2f && "
                        "D_decayL>%f && D_decayL<0.2 && "
                        "dcaDaughters<%f && "
-                       "k_dca>%f && k_dca<0.1 && "
-                       "pi1_dca>%f && pi1_dca<0.1 && "
+                       "k_dca>%f && "
+                       "pi1_dca>%f && "
                        "dcaD0ToPv<%f && "
                        "cosTheta>%f",
                        ptmin, ptmax, tmvaCuts::minPt, tmvaCuts::minPt,
@@ -294,31 +297,26 @@ void estimateNsigNbckg(Double_t ptmin, Double_t ptmax){
                        tmvaCuts::dcaV0ToPv,
                        tmvaCuts::cosTheta);
 
-    TFile *inputSim = new TFile("/home/lukas/work/tmva_d0/sim/ntpTMVA_D0.toyMC.0910.fullEff.root");
+    TFile *inputSim = new TFile("/home/lukas/work/tmva_d0/sim/ntp_FS_data_global_HS_dca1_0302.root");
     TTree *signalTree = (TTree*) inputSim->Get("ntp_signal");
-    TCut pid = "pid>0.5";
+    TCut pid = "pid>0.5 && tpc>0 && hft>0";
 
     cout<<mycuts<<endl;
 
-    Long64_t signal=signalTree->GetEntries(mycuts+pid);
-    Long64_t all=signalTree->GetEntries(Form("D_pt>=%1.2f && D_pt<%1.2f", ptmin, ptmax));
+    Long64_t all=signalTree->GetEntries(Form("D_pt>=%1.2f && D_pt<%1.2f", ptmin, ptmax)); //all of the D0s in the y<1
+    Long64_t signal=signalTree->GetEntries(mycuts+pid); //D0s in the detector + after pre-cuts, so those for selection
 
-//    TF1 *reco = new TF1("reco", "0.5*([0]+[1]*x+[2]*x*x+[3]*x*x*x)", 0, 10);
-// //   reco->SetParameters(0.0239696, -0.0503129, 0.0556806, -0.0041924);
-//    reco->SetParameters(0.00174319, -0.00388281, 0.0048162, -0.000424064);
-//    Double_t totaleff=reco->Eval(pT);
-
-    Double_t eff = (double)signal/(double)all;
+    Double_t eff = (double)signal/(double)all; //efficiency of PID + precuts
+    eff = eff*0.5*0.8;  //efficiency of TB (0.8) and PV resolution (0.5)
     cout<<"Estimated efficiency is: "<<eff<<endl;
 
-//    Float_t invYield=fD0->Eval(pT);
-    Float_t invYield=10*f1D0pp->Eval(pT)/50;//12: 0.4639 7: 0.4893//  10 is for nBin, 50 is just how it is saved...
-
-    NSig = 2*TMath::Pi()*pT*dpT*dy*2*invYield*nevt*BR*eff*0.7;
+    Float_t invYield=7.5*0.61/42.;//12: 0.4639 7: 0.4893//  10 is for nBin, 50 is just how it is saved...
+    invYield=invYield*f1D0pp->Integral(pT-ptError, pT+ptError,0.00001);
+    NSig = 2*TMath::Pi()*pT*dpT*dy*2*invYield*nevt*BR*eff;
 
     cout<<"NSIG = "<<NSig<<endl;
 
-    TString input = "/home/lukas/work/dmesons/Dmaker_ndAu/Dmaker_dAu/ntp/ntp.D0.0110.root";
+    TString input = "/home/lukas/work/dmesons/Dmaker_ndAu/Dmaker_dAu/ntp/ntp.D0.2608.root";
     TFile *inputBckg = new TFile(input);
     TTree *bckgTree = (TTree*) inputBckg->Get("ntp_background");
     Nbckg=bckgTree->GetEntries(mycuts+massCut); //mascut helped to move sign max to the left
@@ -400,17 +398,50 @@ void project_bdt_oneCut(Double_t ptmin, Double_t ptmax, Double_t nTrees, Double_
     hisSubtr->Rebin(10);
     listOut->Add(hisSubtr);
 
+    Float_t ptBin=(ptmax+ptmin)/2;
+    Float_t ptBinError=(ptmax-ptmin)/2;
+
+
     TString outFile=Form("finalAnalysis/%s/signals_%.4fbdt_pt_%.1f_%.1f.root", folderDate.Data(), bdtRange, ptmin, ptmax);
+
+    FitD0Peak *fitmass1 = new FitD0Peak(his[0], his[1], ptmin, ptmax, outFile);
+    fitmass1->setNSigma(5);
+    fitmass1->fitComeOn();
+
+    TGraphErrors* grResults5sigma = new TGraphErrors();
+    grResults5sigma->SetPoint(0, ptBin, fitmass1->getRawYield());
+    grResults5sigma->SetPointError(0, ptBinError, fitmass1->getRawYieldError());
+    grResults5sigma->SetMarkerColor(1);
+    grResults5sigma->SetMarkerStyle(21);
+    grResults5sigma->SetTitle("");
+    grResults5sigma->GetXaxis()->SetLabelSize(0.04);
+    grResults5sigma->GetYaxis()->SetLabelSize(0.04);
+    grResults5sigma->GetXaxis()->SetTitleSize(0.045);
+    delete fitmass1;
+
+
+    FitD0Peak *fitmass2 = new FitD0Peak(his[0], his[1], ptmin, ptmax, outFile);
+    fitmass2->setFitRange(1.73,1.97);
+    fitmass2->fitComeOn();
+
+    TGraphErrors* grResultsRange1= new TGraphErrors();
+    grResultsRange1->SetPoint(0, ptBin, fitmass2->getRawYield());
+    grResultsRange1->SetPointError(0, ptBinError, fitmass2->getRawYieldError());
+    grResultsRange1->SetMarkerColor(1);
+    grResultsRange1->SetMarkerStyle(21);
+    grResultsRange1->SetTitle("");
+    grResultsRange1->GetXaxis()->SetLabelSize(0.04);
+    grResultsRange1->GetYaxis()->SetLabelSize(0.04);
+    grResultsRange1->GetXaxis()->SetTitleSize(0.045);
+    delete fitmass2;
+
+
     FitD0Peak *fitmass = new FitD0Peak(his[0], his[1], ptmin, ptmax, outFile);
     fitmass->doStuff();
 
-
-    Float_t ptBin=(ptmax+ptmin)/2;
-//    TCanvas *cEff = new TCanvas("cEff", "cEff", 900, 1000);
-//    cEff->SetGrid();
     TGraphErrors* grResults = new TGraphErrors();
     grResults->SetPoint(0, ptBin, fitmass->getRawYield());
-    grResults->SetPointError(0, 0, fitmass->getRawYieldError());
+    grResults->SetPointError(0, ptBinError, fitmass->getRawYieldError());
     grResults->SetMarkerColor(1);
     grResults->SetMarkerStyle(21);
     grResults->SetTitle("");
@@ -420,7 +451,7 @@ void project_bdt_oneCut(Double_t ptmin, Double_t ptmax, Double_t nTrees, Double_
 
     TGraphErrors* grResultsFit = new TGraphErrors();
     grResultsFit->SetPoint(0, ptBin, fitmass->getRawYieldFit());
-    grResultsFit->SetPointError(0, 0, fitmass->getRawYieldFitError());
+    grResultsFit->SetPointError(0, ptBinError, fitmass->getRawYieldFitError());
     grResultsFit->SetMarkerColor(1);
     grResultsFit->SetMarkerStyle(21);
     grResultsFit->SetTitle("");
@@ -428,8 +459,22 @@ void project_bdt_oneCut(Double_t ptmin, Double_t ptmax, Double_t nTrees, Double_
     grResultsFit->GetYaxis()->SetLabelSize(0.04);
     grResultsFit->GetXaxis()->SetTitleSize(0.045);
 
+    TGraphErrors* grResultsFitBckg = new TGraphErrors();
+    grResultsFitBckg->SetPoint(0, ptBin, fitmass->getRawYieldBckgFit());
+    grResultsFitBckg->SetPointError(0, ptBinError, fitmass->getRawYieldBckgFitError());
+    grResultsFitBckg->SetMarkerColor(1);
+    grResultsFitBckg->SetMarkerStyle(21);
+    grResultsFitBckg->SetTitle("");
+    grResultsFitBckg->GetXaxis()->SetLabelSize(0.04);
+    grResultsFitBckg->GetYaxis()->SetLabelSize(0.04);
+    grResultsFitBckg->GetXaxis()->SetTitleSize(0.045);
+    delete fitmass;
+
+
+
+
     TCut cutMass = Form("D_mass>%f && D_mass<%f", fitmass->getMean()-3*fitmass->getSigma(), fitmass->getMean()+3*fitmass->getSigma());
-    setCuts+=cutMass;
+//    setCuts+=cutMass;
 
     Float_t nSignalTuple = ntp[0]->GetEntries(setCuts);
     Float_t nBackgroundTuple = ntp[1]->GetEntries(setCuts);
@@ -442,11 +487,13 @@ void project_bdt_oneCut(Double_t ptmin, Double_t ptmax, Double_t nTrees, Double_
     cout<<"---------------signal is: "<<nSignalTuple<<endl;
     cout<<"---------------significance is "<<significanceTuple<<endl;
 
-    delete fitmass;
 
     f->cd();
     grResultsFit->Write("raw_yield_fit");
     grResults->Write("raw_yield");
+    grResults5sigma->Write("raw_yield_5sigma");
+    grResultsFitBckg->Write("raw_yield_fit_bckg");
+    grResultsRange1->Write("raw_yield_1.73_1.97");
 //    grResults->Write("significance");
     listOut->Write("hists_D_mass", 1, 0);
     data->Close();
@@ -475,15 +522,15 @@ void project_bdt_oneCut_SIM(Double_t ptmin, Double_t ptmax, Double_t nTrees, Dou
     TCut pTCut = Form("D_ptSIM>=%.3f && D_ptSIM<%.3f", ptmin, ptmax);
     setCuts+=pTCut;
 
-//    Long64_t nAllSim=ntp->GetEntries(setCuts*weight); //all from simu
-
-    setCuts+="k_pt>0.15 && pi1_pt>0.15 && etas>0";
     Long64_t nAllSim=ntp->GetEntries(setCuts*weight); //all from simu
 
-    setCuts+="k_pt>0.15 && pi1_pt>0.15 && etas>0";
+//    setCuts+="k_pt>0.15 && pi1_pt>0.15 && etas>0";
+//    Long64_t nAllSim=ntp->GetEntries(setCuts*weight); //all from simu
+
+    setCuts+="k_pt>0.15 && pi1_pt>0.15 && mcEtas>0";
     Long64_t nAcc=ntp->GetEntries(setCuts*weight);
 
-    setCuts+="tpc>0";
+    setCuts+="tpc>0 && etas>0";
     Long64_t nTpcAcc=ntp->GetEntries(setCuts*weight);
 
     setCuts+="hft>0";
@@ -533,30 +580,37 @@ void project_bdt_oneCut_SIM(Double_t ptmin, Double_t ptmax, Double_t nTrees, Dou
 //    delete fitmass;
 
     f->cd();
-//    grResults->Write("raw_yield");
 
-    TGraphErrors* grAcc = makeGraphOnePoint(ptBin, (float)nAcc/(float)nAllSim, ptBinWidth, ratioError((float)nAcc,(float)nAllSim) );
+//    TGraphErrors* grAcc = makeGraphOnePoint(ptBin, (float)nAcc/(float)nAllSim, ptBinWidth, ratioError((float)nAcc,(float)nAllSim) );
+    TGraphErrors* grAcc = ratioErrorGraph((float)nAcc, (float)nAllSim, ptBin, ptBinWidth);
     grAcc->Write("grAcc");
 
-    TGraphErrors* grTpcAcc = makeGraphOnePoint(ptBin, (float)nTpcAcc/(float)nAllSim, ptBinWidth, ratioError((float)nTpcAcc,(float)nAllSim));
+//    TGraphErrors* grTpcAcc = makeGraphOnePoint(ptBin, (float)nTpcAcc/(float)nAllSim, ptBinWidth, ratioError((float)nTpcAcc,(float)nAllSim));
+    TGraphErrors* grTpcAcc = ratioErrorGraph((float)nTpcAcc, (float)nAllSim, ptBin, ptBinWidth);
     grTpcAcc->Write("grTpcAcc");
 
-    TGraphErrors* grTpcAccHft = makeGraphOnePoint(ptBin, (float)nTpcAccHft/(float)nAllSim, ptBinWidth, ratioError((float)nTpcAccHft,(float)nAllSim));
+//    TGraphErrors* grTpcAccHft = makeGraphOnePoint(ptBin, (float)nTpcAccHft/(float)nAllSim, ptBinWidth, ratioError((float)nTpcAccHft,(float)nAllSim));
+    TGraphErrors* grTpcAccHft = ratioErrorGraph((float)nTpcAccHft, (float)nAllSim, ptBin, ptBinWidth);
     grTpcAccHft->Write("grTpcAccHft");
 
-    TGraphErrors* grTpcAccHftPid = makeGraphOnePoint(ptBin, (float)nTpcAccHftPid/(float)nAllSim, ptBinWidth, ratioError((float)nTpcAccHftPid,(float)nAllSim));
+//    TGraphErrors* grTpcAccHftPid = makeGraphOnePoint(ptBin, (float)nTpcAccHftPid/(float)nAllSim, ptBinWidth, ratioError((float)nTpcAccHftPid,(float)nAllSim));
+    TGraphErrors* grTpcAccHftPid = ratioErrorGraph((float)nTpcAccHftPid, (float)nAllSim, ptBin, ptBinWidth);
     grTpcAccHftPid->Write("grTpcAccHftPid");
 
-    TGraphErrors* grTpcAccHftPidPreCuts = makeGraphOnePoint(ptBin, (float)nTpcAccHftPidPreCuts/(float)nAllSim, ptBinWidth, ratioError((float)nTpcAccHftPidPreCuts,(float)nAllSim));
+//    TGraphErrors* grTpcAccHftPidPreCuts = makeGraphOnePoint(ptBin, (float)nTpcAccHftPidPreCuts/(float)nAllSim, ptBinWidth, ratioError((float)nTpcAccHftPidPreCuts,(float)nAllSim));
+    TGraphErrors* grTpcAccHftPidPreCuts = ratioErrorGraph((float)nTpcAccHftPidPreCuts, (float)nAllSim, ptBin, ptBinWidth);
     grTpcAccHftPidPreCuts->Write("grTpcAccHftPidPreCuts");
 
-    TGraphErrors* grTpcAccHftPidPreCutsBDT = makeGraphOnePoint(ptBin, (float)nTpcAccHftPidPreCutsBDT/(float)nAllSim, ptBinWidth, ratioError((float)nTpcAccHftPidPreCutsBDT,(float)nAllSim));
+//    TGraphErrors* grTpcAccHftPidPreCutsBDT = makeGraphOnePoint(ptBin, (float)nTpcAccHftPidPreCutsBDT/(float)nAllSim, ptBinWidth, ratioError((float)nTpcAccHftPidPreCutsBDT,(float)nAllSim));
+    TGraphErrors* grTpcAccHftPidPreCutsBDT = ratioErrorGraph((float)nTpcAccHftPidPreCutsBDT, (float)nAllSim, ptBin, ptBinWidth);
     grTpcAccHftPidPreCutsBDT->Write("grTpcAccHftPidPreCutsBDT");
 
-    TGraphErrors* grTpcAccHftPreCuts = makeGraphOnePoint(ptBin, (float)nTpcAccHftPreCuts/(float)nAllSim, ptBinWidth, ratioError((float)nTpcAccHftPreCuts,(float)nAllSim));
+//    TGraphErrors* grTpcAccHftPreCuts = makeGraphOnePoint(ptBin, (float)nTpcAccHftPreCuts/(float)nAllSim, ptBinWidth, ratioError((float)nTpcAccHftPreCuts,(float)nAllSim));
+    TGraphErrors* grTpcAccHftPreCuts = ratioErrorGraph((float)nTpcAccHftPreCuts, (float)nAllSim, ptBin, ptBinWidth);
     grTpcAccHftPreCuts->Write("grTpcAccHftPreCuts");
-
-    TGraphErrors* grTpcAccHftPreCutsBDT = makeGraphOnePoint(ptBin, (float)nTpcAccHftPreCutsBDT/(float)nAllSim, ptBinWidth, ratioError((float)nTpcAccHftPreCutsBDT,(float)nAllSim));
+//
+//    TGraphErrors* grTpcAccHftPreCutsBDT = makeGraphOnePoint(ptBin, (float)nTpcAccHftPreCutsBDT/(float)nAllSim, ptBinWidth, ratioError((float)nTpcAccHftPreCutsBDT,(float)nAllSim));
+    TGraphErrors* grTpcAccHftPreCutsBDT = ratioErrorGraph((float)nTpcAccHftPreCutsBDT, (float)nAllSim, ptBin, ptBinWidth);
     grTpcAccHftPreCutsBDT->Write("grTpcAccHftPreCutsBDT");
 
 //    grResults->Write("significance");
@@ -566,10 +620,33 @@ void project_bdt_oneCut_SIM(Double_t ptmin, Double_t ptmax, Double_t nTrees, Dou
 
 //_______________________________________________________________________
 float ratioError(float ratioUp, float ratioDown){
-    float result = ratioUp*ratioUp*ratioDown + ratioDown*ratioDown*ratioUp;
-    result=sqrt(result);
-    result=result/(ratioDown*ratioDown);
-    return result;
+//    auto* hRatioUp = new TH1F("h1","h1",1,0,1);
+//    hRatioUp->SetBinContent(1,ratioUp);
+//    auto* hRatioDown = new TH1F("h2","h2",1,0,1);
+//    hRatioDown->SetBinContent(1,ratioDown);
+//
+//    TGraphAsymmErrors *gEffFunc = new TGraphAsymmErrors();
+//    gEffFunc->Divide(hRatioUp,hRatioDown,"n");
+//    TGraphErrors* grTpcAccHftPreCutsBDT=(TGraphErrors*) gEffFunc;
+//
+//
+//    hRatioUp->Divide(hRatioUp, hRatioDown, 1, 1, "B");
+
+    return 1.;
+}
+
+//_______________________________________________________________________
+TGraphErrors* ratioErrorGraph(float ratioUp, float ratioDown, Float_t ptBin, Float_t ptBinWidth){
+    auto* hRatioUp = new TH1F("h1","h1",1,ptBin-ptBinWidth, ptBin+ptBinWidth);
+    hRatioUp->SetBinContent(1,ratioUp);
+    auto* hRatioDown = new TH1F("h2","h2",1,ptBin-ptBinWidth, ptBin+ptBinWidth);
+    hRatioDown->SetBinContent(1,ratioDown);
+
+    TGraphAsymmErrors *gEffFunc = new TGraphAsymmErrors();
+    gEffFunc->Divide(hRatioUp,hRatioDown,"n");
+    TGraphErrors* grTpcAccHftPreCutsBDT=(TGraphErrors*) gEffFunc;
+
+    return grTpcAccHftPreCutsBDT;
 }
 
 //_______________________________________________________________________
@@ -702,8 +779,8 @@ void plotTogether(Int_t nBins, Double_t *ptmin, Double_t *ptmax, Double_t *nTree
 //    TString axisName[] = {"Raw yield/#varepsilon_{BDT}"};
 
 //    TString names1[] = {"grInvYield", "grResultsRAA", "raw_yield"};
-    TString names1[] = {"grResultsRAA", "grInvYield", "raw_yield", "raw_yield_fit"};
-    TString axisName[] = {"R_{AA} = dAu/pp", "Invariant yield", "Raw yield"};
+    TString names1[] = {"raw_yield", "raw_yield_fit", "raw_yield_fit_bckg", "raw_yield_5sigma", "raw_yield_1.73_1.97"};
+    TString axisName[] = {"Raw yield", "Raw yield - fitted", "Raw yield - fitted background", "raw_yield_5sigma", "raw_yield_1.73_1.97"};
 
     const int ngraphsData = sizeof(names1) / sizeof(TString);
 
@@ -719,7 +796,7 @@ void plotTogether(Int_t nBins, Double_t *ptmin, Double_t *ptmax, Double_t *nTree
             fData->Close();
         }
 
-        TGraphErrors *grYields = new TGraphErrors(nBins, pT, rawYields, 0, rawYieldsErr);
+        TGraphErrors *grYields = new TGraphErrors(nBins, pT, rawYields, ptWidths, rawYieldsErr);
         grYields->SetMarkerColor(1);
         grYields->SetMarkerStyle(21);
         grYields->SetTitle("");
@@ -869,9 +946,9 @@ void drawSignificanceData(Int_t nBins, Double_t *ptmin, Double_t *ptmax, Double_
     legend -> SetLineColor(0);
     legend -> SetTextSize(0.035);
 
-    maximum=1.2*maximum;
+    maximum=1.4*maximum;
     for (int j = 0; j < nBins; ++j) {
-        grSignData[j]->GetYaxis()->SetRangeUser(0,9);
+        grSignData[j]->GetYaxis()->SetRangeUser(0,11);
         grSignData[j]->GetXaxis()->SetLimits(0.08,0.88);
         grSignData[j]->SetMarkerSize(1.2);
 
@@ -886,7 +963,7 @@ void drawSignificanceData(Int_t nBins, Double_t *ptmin, Double_t *ptmax, Double_
         line[j]->SetX1(bdtResponse[j]);
         line[j]->SetX2(bdtResponse[j]);
         line[j]->SetY1(0);
-        line[j]->SetY2(9);
+        line[j]->SetY2(11);
 //        line[j]->SetY2(maxSign[j]);
         line[j]->Draw("same");
     }
@@ -901,6 +978,10 @@ void drawSignificanceData(Int_t nBins, Double_t *ptmin, Double_t *ptmax, Double_
     text5->Draw("same");
     legend->Draw("same");
 
+
+    cSignData->SaveAs(Form("finalAnalysis/%s/img/sign_all.png", folderDate.Data()));
+    cSignData->SaveAs(Form("finalAnalysis/%s/img/sign_all.pdf", folderDate.Data()));
+    cSignData->SaveAs(Form("finalAnalysis/%s/img/sign_all.eps", folderDate.Data()));
 }
 //_______________________________________________________________________
 void setCurrentFolder(TString name) {
@@ -908,10 +989,19 @@ void setCurrentFolder(TString name) {
 }
 //_______________________________________________________________________
 void BDTCutEstimate() {
-//    Double_t ptMin[]={1, 2, 3};
-//    Double_t ptMax[]={2, 3, 5};
-//
+    Double_t ptMin[]={1, 2, 3};
+    Double_t ptMax[]={2, 3, 5};
+//      const int nBins=sizeof(ptMin)/ sizeof(Double_t);
+//    const int nBins=3;
+    const int nBins=3;
 
+    Double_t nTrees[]={150,150,400};
+    Double_t depth[]={3,3,3};
+//    const int nSetups=4;
+    const int nSetups=1;
+
+
+    Double_t bdtResponse[3];
     folderDate="";
 
     if(folderDate=="") {
@@ -927,6 +1017,29 @@ void BDTCutEstimate() {
         gSystem->Exec(Form("mkdir finalAnalysis/%s/img/root", folderDate.Data()));
     }
 
+    for (int i = 0; i < nBins; ++i) {
+//        for (int j = 0; j < nSetups; ++j) {
+            bdtResponse[i] = doSignificance(ptMin[i], ptMax[i], nTrees[i], depth[i]); //bdt response from previous measurements
+            mCuts.push_back(Form("D_pt>=%.3f && D_pt<%.3f", ptMin[i], ptMax[i]));
+            mBDTCut = Form("BDTresponse>=%.3f", bdtResponse[i]);
+
+//        project_bdt_oneCut_SIM(ptMin[i], ptMax[i], nTrees[i], depth[i], bdtResponse[i], inputSim[i], "signal", "background");
+//
+
+//        doRawYield(ptMin[i], ptMax[i], nTrees[i], depth[i], bdtResponse[i]); //raw yield with ideal BDT response and given bdt training - take out_local.root from the correct folder, make cuts and plot it
+//        doRawYieldSIM(ptMin[i], ptMax[i], nTrees[i], depth[i], bdtResponse[i]); //raw yield with ideal BDT response and given bdt training - take out_local.root from the correct folder, make cuts and plot it
+//        correctYield(ptMin[i], ptMax[i], nTrees[i], depth[i], bdtResponse[i]);
+            mCuts.clear();
+            mCuts.shrink_to_fit();
+//        }
+    }
+
+    for (int i = 0; i < nBins; ++i) {
+        cout<<bdtResponse[i]<<endl;
+    }
+
+
+
     //GOOD SET
 //    Double_t ptMin[]={1,2,3};
 //    Double_t ptMax[]={2,3,5};
@@ -937,86 +1050,86 @@ void BDTCutEstimate() {
 //    Double_t bdtResponse[]={0.7552, 0.64516, 0.53154};
 
 
-    Double_t ptMin[16];
-    Double_t ptMax[16];
-    Double_t nTrees[16];
-    Double_t depth[16];
-    Double_t bdtResponse[16];
-
-    for (int j = 0; j < 16; ++j) {
-        ptMin[j] = 1+j*0.25;
-        ptMax[j] = 1+(j+1)*0.25;
-    }
-    const int nBins=sizeof(ptMin)/ sizeof(Double_t);
-
-    TString inputSim[nBins];
-
-    for (int k = 0; k < nBins; ++k) {
-        if (ptMin[k]>=1 && ptMax[k]<=2){
-            nTrees[k]=100;
-            depth[k]=3;
-            bdtResponse[k]=0.7552;
-            inputSim[k]="/home/lukas/work/tmva_d0/BDT/pt_1_2/n100_d3/out_local_SIM_ntpTMVA_full_D0.toyMc.0303.root";
-        }
-
-        if (ptMin[k]>=2 && ptMax[k]<=3){
-            nTrees[k]=150;
-            depth[k]=3;
-            bdtResponse[k]=0.64516;
-            inputSim[k]="/home/lukas/work/tmva_d0/BDT/pt_2_3/n150_d3/out_local_SIM_ntpTMVA_full_D0.toyMc.0303.root";
-
-        }
-
-        if (ptMin[k]>=3 && ptMax[k]<=5){
-            nTrees[k]=400;
-            depth[k]=3;
-            bdtResponse[k]=0.53154;
-            inputSim[k]="/home/lukas/work/tmva_d0/BDT/pt_3_5/n400_d3/out_local_SIM_ntpTMVA_full_D0.toyMc.0303.root";
-
-        }
-    }
-
-    for (int l = 0; l < nBins; ++l) {
-        cout<<ptMin[l]<<" "<<ptMax[l]<<" "<<nTrees[l]<<" "<<depth[l]<<" "<<bdtResponse[l]<<endl;
-    }
-
-    gROOT->ProcessLine(".L analyse/FitD0Peak.cpp++");
-
-    precutsTMVA = Form("k_pt>%1.2f && pi1_pt>%1.2f && "
-                                        "D_decayL>%f && D_decayL<0.2 && "
-                                        "dcaDaughters<%f && "
-                                        "k_dca>%f && k_dca<0.2 && "
-                                        "pi1_dca>%f && pi1_dca<0.2 && "
-                                        "dcaD0ToPv<%f && "
-                                        "cosTheta>%f",
-                                        tmvaCuts::minPt, tmvaCuts::minPt,
-                                        tmvaCuts::decayLength, tmvaCuts::dcaDaughters,
-                                        tmvaCuts::kDca, tmvaCuts::pDca,
-                                        tmvaCuts::dcaV0ToPv,
-                                        tmvaCuts::cosTheta);
-//    TString input = "/hom//lukas/work/tmva_d0/BDT/pt_1_2/n100_d3/out_local_SIM_ntpTMVA_full_D0.toyMc.0303.root";
-//    TString input = "/home/lukas/work/tmva_d0/sim/ntpTMVA_D0.toyMC.0910.fullEff.root";
-
-    for (int i = 0; i < nBins; ++i) {
-////    for (int i = 0; i < 1; ++i) {
-//        bdtResponse[i] = doSignificance(ptMin[i], ptMax[i], nTrees[i], depth[i]); //bdt response from previous measurements
-//        mCuts.push_back(Form("D_pt>=%.3f && D_pt<%.3f", ptMin[i], ptMax[i]));
-//        mCuts.push_back("refMult>10");
-        mBDTCut=Form("BDTresponse>=%.3f", bdtResponse[i]);
-
-//        project_bdt_oneCut_SIM(ptMin[i], ptMax[i], nTrees[i], depth[i], bdtResponse[i], inputSim[i], "signal", "background");
+//    Double_t ptMin[16];
+//    Double_t ptMax[16];
+//    Double_t nTrees[16];
+//    Double_t depth[16];
+//    Double_t bdtResponse[16];
 //
-
-//        doRawYield(ptMin[i], ptMax[i], nTrees[i], depth[i], bdtResponse[i]); //raw yield with ideal BDT response and given bdt training - take out_local.root from the correct folder, make cuts and plot it
-//        doRawYieldSIM(ptMin[i], ptMax[i], nTrees[i], depth[i], bdtResponse[i]); //raw yield with ideal BDT response and given bdt training - take out_local.root from the correct folder, make cuts and plot it
-//        correctYield(ptMin[i], ptMax[i], nTrees[i], depth[i], bdtResponse[i]);
-        mCuts.clear();
-        mCuts.shrink_to_fit();
-    }
-
-    plotTogetherSIM(nBins, ptMin, ptMax, nTrees, depth, bdtResponse);
-//    drawSignificanceData(nBins, ptMin, ptMax, nTrees, depth, bdtResponse);
-    cout<<"Work is done. Everything is in folder "<<folderDate<<endl;
+//    for (int j = 0; j < 16; ++j) {
+//        ptMin[j] = 1+j*0.25;
+//        ptMax[j] = 1+(j+1)*0.25;
+//    }
+//    const int nBins=sizeof(ptMin)/ sizeof(Double_t);
+//
+//    TString inputSim[nBins];
+//
+//    for (int k = 0; k < nBins; ++k) {
+//        if (ptMin[k]>=1 && ptMax[k]<=2){
+//            nTrees[k]=100;
+//            depth[k]=3;
+//            bdtResponse[k]=0.7552;
+//            inputSim[k]="/home/lukas/work/tmva_d0/BDT/pt_1_2/n100_d3/out_local_SIM_ntpTMVA_full_D0.toyMc.0303.root";
+//        }
+//
+//        if (ptMin[k]>=2 && ptMax[k]<=3){
+//            nTrees[k]=150;
+//            depth[k]=3;
+//            bdtResponse[k]=0.64516;
+//            inputSim[k]="/home/lukas/work/tmva_d0/BDT/pt_2_3/n150_d3/out_local_SIM_ntpTMVA_full_D0.toyMc.0303.root";
+//
+//        }
+//
+//        if (ptMin[k]>=3 && ptMax[k]<=5){
+//            nTrees[k]=400;
+//            depth[k]=3;
+//            bdtResponse[k]=0.53154;
+//            inputSim[k]="/home/lukas/work/tmva_d0/BDT/pt_3_5/n400_d3/out_local_SIM_ntpTMVA_full_D0.toyMc.0303.root";
+//
+//        }
+//    }
+//
+//    for (int l = 0; l < nBins; ++l) {
+//        cout<<ptMin[l]<<" "<<ptMax[l]<<" "<<nTrees[l]<<" "<<depth[l]<<" "<<bdtResponse[l]<<endl;
+//    }
+//
+//    gROOT->ProcessLine(".L analyse/FitD0Peak.cpp++");
+//
+//    precutsTMVA = Form("k_pt>%1.2f && pi1_pt>%1.2f && "
+//                                        "D_decayL>%f && D_decayL<0.2 && "
+//                                        "dcaDaughters<%f && "
+//                                        "k_dca>%f && k_dca<0.2 && "
+//                                        "pi1_dca>%f && pi1_dca<0.2 && "
+//                                        "dcaD0ToPv<%f && "
+//                                        "cosTheta>%f",
+//                                        tmvaCuts::minPt, tmvaCuts::minPt,
+//                                        tmvaCuts::decayLength, tmvaCuts::dcaDaughters,
+//                                        tmvaCuts::kDca, tmvaCuts::pDca,
+//                                        tmvaCuts::dcaV0ToPv,
+//                                        tmvaCuts::cosTheta);
+////    TString input = "/hom//lukas/work/tmva_d0/BDT/pt_1_2/n100_d3/out_local_SIM_ntpTMVA_full_D0.toyMc.0303.root";
+////    TString input = "/home/lukas/work/tmva_d0/sim/ntpTMVA_D0.toyMC.0910.fullEff.root";
+//
+//    for (int i = 0; i < nBins; ++i) {
+//////    for (int i = 0; i < 1; ++i) {
+////        bdtResponse[i] = doSignificance(ptMin[i], ptMax[i], nTrees[i], depth[i]); //bdt response from previous measurements
+////        mCuts.push_back(Form("D_pt>=%.3f && D_pt<%.3f", ptMin[i], ptMax[i]));
+////        mCuts.push_back("refMult>10");
+//        mBDTCut=Form("BDTresponse>=%.3f", bdtResponse[i]);
+//
+////        project_bdt_oneCut_SIM(ptMin[i], ptMax[i], nTrees[i], depth[i], bdtResponse[i], inputSim[i], "signal", "background");
+////
+//
+////        doRawYield(ptMin[i], ptMax[i], nTrees[i], depth[i], bdtResponse[i]); //raw yield with ideal BDT response and given bdt training - take out_local.root from the correct folder, make cuts and plot it
+////        doRawYieldSIM(ptMin[i], ptMax[i], nTrees[i], depth[i], bdtResponse[i]); //raw yield with ideal BDT response and given bdt training - take out_local.root from the correct folder, make cuts and plot it
+////        correctYield(ptMin[i], ptMax[i], nTrees[i], depth[i], bdtResponse[i]);
+//        mCuts.clear();
+//        mCuts.shrink_to_fit();
+//    }
+//
+//    plotTogetherSIM(nBins, ptMin, ptMax, nTrees, depth, bdtResponse);
+////    drawSignificanceData(nBins, ptMin, ptMax, nTrees, depth, bdtResponse);
+//    cout<<"Work is done. Everything is in folder "<<folderDate<<endl;
 
 }
 

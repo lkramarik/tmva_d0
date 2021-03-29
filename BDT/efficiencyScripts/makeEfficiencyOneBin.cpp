@@ -7,8 +7,11 @@
 void makeEfficiencyOneBin(TString input="ntp_fullEvent_full_production.1M.vtx",
                        Float_t ptMin=1.,
                        Float_t ptMax=2,
-                       TString weight="") {
+                       TString weight="",
+                       TCut additionalCut="") {
     gROOT->ProcessLine(".L analyse/FitD0Peak.cpp+");
+
+    input = input.ReplaceAll(".root", 5, "", 0);
 
     setCurrentFolder(input); //defined in BDTCutEstimate
 
@@ -20,8 +23,10 @@ void makeEfficiencyOneBin(TString input="ntp_fullEvent_full_production.1M.vtx",
     precutsTMVA = Form("k_pt>%1.2f && pi1_pt>%1.2f && "
                        "D_decayL>%f && D_decayL<0.2 && "
                        "dcaDaughters<%f && "
-                       "k_dca>%f && k_dca<0.2 && "
-                       "pi1_dca>%f && pi1_dca<0.2 && "
+                       "k_dca>%f && k_dca<1. && "
+                       "pi1_dca>%f && pi1_dca<1. && "
+//                       "k_dca>%f && "
+//                       "pi1_dca>%f && "
                        "dcaD0ToPv<%f && "
                        "cosTheta>%f",
                        tmvaCuts::minPt, tmvaCuts::minPt,
@@ -58,7 +63,9 @@ void makeEfficiencyOneBin(TString input="ntp_fullEvent_full_production.1M.vtx",
     TString inputFileAdressName = Form("/home/lukas/work/tmva_d0/BDT/pt_%.0f_%.0f/n%i_d%i/%s%s.root", ptminFilename, ptmaxFilename, (int) nTrees, (int) depth, prefix.Data(), input.Data());
 
     mBDTCut = Form("BDTresponse>=%.3f", analysisSetup::bdtCut[analysisBin]);
-    mCuts.push_back("mcEtas>0");
+//    mCuts.push_back("mcEtas>0 && k_pt>0.15 && pi1_pt>0.15 && etas>0");
+//    mCuts.push_back("tpc>0 && mcEtas>0 && k_pt>0.15 && pi1_pt>0.15 && etas>0");
+    mCuts.push_back(additionalCut);
 
 //    mCuts.push_back("mcEtas>0 && hft>0 && tpc>0 && pid>0");
 

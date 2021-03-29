@@ -23,10 +23,9 @@ void drawEff(){
 //    std::vector<TString*> legendStrings;
     std::vector<const char *> legendStrings;
 
-    TString names[] = {"pt_1.0_2.0_nTrees_100.0_maxDepth_3.0",
-                       "pt_2.0_3.0_nTrees_150.0_maxDepth_3.0",
-                       "pt_3.0_5.0_nTrees_400.0_maxDepth_3.0"
-    };
+    TString names[] = {"pt_1_2/n150_d3/pt_1.0_2.0_nTrees_150.0_maxDepth_3.0",
+                       "pt_2_3/n150_d3/pt_2.0_3.0_nTrees_150.0_maxDepth_3.0",
+                       "pt_3_5/n400_d3/pt_3.0_5.0_nTrees_400.0_maxDepth_3.0"};
 
 
     TString leg[] = {"1<p_{T}<2 GeV/c",

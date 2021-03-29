@@ -24,6 +24,8 @@
 #include <stdio.h>
 #include <math.h>
 #include "TObject.h"
+#include "TFitResult.h"
+
 
 using namespace std;
 using namespace TMath;
@@ -39,13 +41,17 @@ public:
     float getSigma();
     float getHeight();
     float getSignificance();
+
     float getRawYield();
     float getRawYieldError();
     float getRawYieldFit();
     float getRawYieldFitError();
+    float getRawYieldBckgFit();
+    float getRawYieldBckgFitError();
 
     void makeTuple(TString, TCut, bool);
     void setMean(float);
+    void setNSigma(float);
     void setSigma(float);
     void setHeight(float);
     void addMixedEventBckg(TH1F*);
@@ -58,6 +64,8 @@ public:
 
     void setTupleSignal(TNtuple*);
     void setTupleBackground(TNtuple*);
+
+    void fitComeOn();
 
     TH1F* sigOrig;
     TH1F* bckgOrig;
@@ -83,6 +91,8 @@ private:
     Float_t ptMin;
     Float_t ptMax;
 
+    TString mOutputImgName;
+
     TNtuple* mTupleSignal;
     TNtuple* mTupleBackground;
 
@@ -101,13 +111,16 @@ private:
     Double_t  rawYieldFit;
     Double_t  rawYieldFitError;
 
+    Double_t  rawYieldFitBckg;
+    Double_t  rawYieldFitBckgError;
+
     bool lines;
     TLine* rightLine;
     TLine* leftLine;
 
     void setHistoStyle(TH1F*, Int_t, Int_t);
     void fitFunction();
-    void fitComeOn();
+    void fitBackground();
 
     const float peakMin;
     const float peakMax;
@@ -132,7 +145,10 @@ inline float FitD0Peak::getRawYield() {return rawYield;}
 inline float FitD0Peak::getRawYieldError() {return rawYieldError;}
 inline float FitD0Peak::getRawYieldFit() {return rawYieldFit;}
 inline float FitD0Peak::getRawYieldFitError() {return rawYieldFitError;}
+inline float FitD0Peak::getRawYieldBckgFit() { return rawYieldFitBckg; }
+inline float FitD0Peak::getRawYieldBckgFitError() {return rawYieldFitBckgError;}
 
+inline void FitD0Peak::setNSigma(float a) {nsigma = a;}
 inline void FitD0Peak::setMean(float a) {mMean = a;}
 inline void FitD0Peak::setSigma(float a) {mSigma = a;}
 inline void FitD0Peak::setHeight(float a) {mHeight = a;}

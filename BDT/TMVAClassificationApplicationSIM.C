@@ -25,8 +25,6 @@ void TMVAClassificationApplicationSIM(TString input = "/home/lukas/work/sim/tupl
     cout<<ptmin<<" "<<ptmax<<endl;
 
     TFile* sim = new TFile(input ,"r");
-//    TFile* sim = new TFile("/home/lukas/work/tmva_d0/sim/ntpTMVA_D0.toyMC.0910.fullEff.root" ,"r");
-//    TFile* sim = new TFile("/home/lukas/work/tmva_d0/sim/ntpTMVA_D0.toyMc.1605.root" ,"r");
     TNtuple* ntp = (TNtuple*)sim -> Get("ntp_signal");
 
     TFile* Dplus_file = new TFile (output, "RECREATE");
@@ -38,7 +36,7 @@ void TMVAClassificationApplicationSIM(TString input = "/home/lukas/work/sim/tupl
     Use["BDT"]             = 1; // uses Adaptive Boost
 
     std::cout << std::endl;
-    std::cout << "==> Start TMVAClassificationApplication" << std::endl;
+    std::cout << "==> Start TMVAClassificationApplication on SIm files" << std::endl;
 
     Float_t D_ptSIM, D_pt, D_mass, refMult, pi1_pt, k_pt, k_dca, pi1_dca, dcaDaughters, cosTheta, D_decayL, dcaD0ToPv, D_cosThetaStar, primary, diffRemovedPrimary, pid, hft, etas, tpc, mcEtas, weight;
 

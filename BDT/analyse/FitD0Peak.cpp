@@ -12,6 +12,7 @@
 #include "TEventList.h"
 #include "TFile.h"
 #include "TGraphErrors.h"
+#include "TVirtualFitter.h"
 #include "TPaveStats.h"
 #include "TMultiGraph.h"
 #include <iostream>
@@ -29,7 +30,8 @@ ClassImp(FitD0Peak)
 
 FitD0Peak::FitD0Peak(TH1F* sigInput, TH1F* bckgInput, Float_t ptMinInput, Float_t ptMaxInput, TString mOutputFileName) : TObject(),
                    mSigma(999), mSigmaE(999), mMean(999), mMeanE(999), mHeight(999), mHeightE(999),
-                   significanceBins(999), SoverB(999), rawYieldError(999), rawYield(999), rawYieldFit(999), rawYieldFitError(999),
+                   significanceBins(999), SoverB(999), rawYieldError(999),
+                   rawYield(999), rawYieldFit(999), rawYieldFitError(999), rawYieldFitBckg(999), rawYieldFitBckgError(999),
                    mFitRMin(1.7), mFitRMax(2.0),
                    peakMin(1.82), peakMax(1.88),
                    nsigma(3), lines(false) {
@@ -47,9 +49,12 @@ FitD0Peak::FitD0Peak(TH1F* sigInput, TH1F* bckgInput, Float_t ptMinInput, Float_
     bckgOrig->Rebin(10);
     bckgToWork->Rebin(10);
 
+    fOut = new TFile(mOutputFileName,"recreate");
+
+    mOutputImgName = mOutputFileName.ReplaceAll(".root", 5, "", 0);
+
     binSize=sigOrig->GetBinWidth(sigOrig->FindBin(1.864));
 
-    fOut = new TFile(mOutputFileName,"recreate");
     text1 = new TPaveText(0.719,0.9229,0.998,0.980,"brNDC");
     text1->SetTextSize(0.04);
     text1->SetShadowColor(0);
@@ -61,14 +66,31 @@ FitD0Peak::FitD0Peak(TH1F* sigInput, TH1F* bckgInput, Float_t ptMinInput, Float_
     tx2.SetTextSize(0.04);
 
     setHistoStyle(sigOrig, 46, 20);
-    setHistoStyle(bckgOrig, 1, 25);
-    setHistoStyle(bckgToWork, 2, 25);
+    setHistoStyle(bckgOrig, 31, 21);
+    setHistoStyle(bckgToWork, 2, 21);
 
     sigSubtracted=(TH1F*)sigOrig->Clone(sigOrig->GetName());
     setHistoStyle(sigSubtracted, 9, 20);
 
     mTupleSignal=new TNtuple();
     mTupleBackground=new TNtuple();
+
+    Float_t intLowLow = 1.7;
+    Float_t intLowUp = 1.8;
+    Float_t intUpLow = 1.92;
+    Float_t intUpUp = 2.;
+
+    if (isMxdEv) bckgToWork->Add(mxdOrig, 1);
+
+    Float_t hBackIntegral = bckgToWork -> Integral(bckgToWork -> FindBin(intLowLow), bckgToWork->FindBin(intLowUp), "") + bckgToWork -> Integral(bckgToWork->FindBin(intUpLow), bckgToWork->FindBin(intUpUp), ""); //integrals of original histos
+    Float_t hSignIntegral = sigOrig -> Integral(sigOrig -> FindBin(intLowLow), sigOrig -> FindBin(intLowUp), "") + sigOrig -> Integral(sigOrig->FindBin(intUpLow), sigOrig->FindBin(intUpUp), ""); //integrals of original histos
+
+    std::cout<<"Backgroung Integral: "<<hBackIntegral<<endl;
+    std::cout<<"Signal Integral :"<<hSignIntegral<<endl;
+
+    if(scale) bckgToWork->Scale(hSignIntegral/hBackIntegral);
+    sigSubtracted->Add(bckgToWork,-1);
+
 
 //    doStuff();
 
@@ -77,39 +99,13 @@ FitD0Peak::FitD0Peak(TH1F* sigInput, TH1F* bckgInput, Float_t ptMinInput, Float_
 
 //____________________________________________________________________________________________________________________________
 void FitD0Peak::doStuff(){
-        Float_t intLowLow = 1.7;
-        Float_t intLowUp = 1.8;
-        Float_t intUpLow = 1.92;
-        Float_t intUpUp = 2.;
-
-        if (isMxdEv) bckgToWork->Add(mxdOrig, 1);
-
-        Float_t hBackIntegral = bckgToWork -> Integral(bckgToWork -> FindBin(intLowLow), bckgToWork->FindBin(intLowUp), "") + bckgToWork -> Integral(bckgToWork->FindBin(intUpLow), bckgToWork->FindBin(intUpUp), ""); //integrals of original histos
-        Float_t hSignIntegral = sigOrig -> Integral(sigOrig -> FindBin(intLowLow), sigOrig -> FindBin(intLowUp), "") + sigOrig -> Integral(sigOrig->FindBin(intUpLow), sigOrig->FindBin(intUpUp), ""); //integrals of original histos
-
-        std::cout<<"Backgroung Integral: "<<hBackIntegral<<endl;
-        std::cout<<"Signal Integral :"<<hSignIntegral<<endl;
-
-        if(scale) bckgToWork->Scale(hSignIntegral/hBackIntegral);
-        sigSubtracted->Add(bckgToWork,-1);
-
-
-        Double_t nentriesSig = sigOrig->Integral(sigOrig->FindBin(1.7), sigOrig->FindBin(2),"");
         fitComeOn();
         fitFunction();
+        fitBackground();
 
         plotPub();
         plotOrig();
         plotPubWithResidual();
-//        ofstream yieldsF;
-//        yieldsF.open("raw_yields_fct.txt", std::ios::app);
-//        yieldsF<<ptMin<<" "<<ptMax<<" "<<integral_function_yield/binSize<<" "<<integral_function_yield_error/binSize<<endl;
-//        yieldsF.close();
-
-//        ofstream yields;
-//        yields.open("raw_yields.txt", std::ios::app);
-//        yields<<ptMin<<" "<<ptMax<<" "<<rawYield<<" "<<rawYieldError<<endl;
-//        yields.close();
 }
 
 //____________________________________________________________________________________________________________________________
@@ -182,6 +178,8 @@ void FitD0Peak::plotPub(){
 
     fOut->cd();
     cP->Write(Form("%.1f_%.1f_publ",ptMin, ptMax));
+    cP->SaveAs(mOutputImgName+"_publ.png");
+    cP->SaveAs(mOutputImgName+"_publ.eps");
     cP->Close();
     delete cP;
     delete textPub1;
@@ -248,6 +246,8 @@ void FitD0Peak::plotPubWithResidual(){
 
     fOut->cd();
     cP->Write(Form("%.1f_%.1f_publ_peak",ptMin, ptMax));
+    cP->SaveAs(mOutputImgName+"_publ_peak.png");
+    cP->SaveAs(mOutputImgName+"_publ_peak.eps");
     cP->Close();
     delete cP;
     delete textPub1;
@@ -304,6 +304,8 @@ void FitD0Peak::plotOrig(){
 //    text5 -> Draw("same");
     fOut->cd();
     c5->Write(Form("%.1f_%.1f_mass_zoom", ptMin, ptMax));
+    c5->SaveAs(mOutputImgName+"_mass_zoom.png");
+    c5->SaveAs(mOutputImgName+"_mass_zoom.eps");
     c5->Close();
 
     delete c5;
@@ -397,6 +399,9 @@ void FitD0Peak::fitFunction() {
 
     fOut->cd();
     c1->Write(Form("%.1f_%.1f_fit_fct", ptMin, ptMax));
+    c1->SaveAs(mOutputImgName+"_fit_fct.eps");
+    c1->SaveAs(mOutputImgName+"_fit_fct.png");
+
     c1->Close();
 
     delete c1;
@@ -409,6 +414,8 @@ void FitD0Peak::fitFunction() {
 //____________________________________________________________________________________________________________________________
 void FitD0Peak::fitComeOn() {
     TCanvas *c1 = new TCanvas("c1","c1",1200,900);
+    gStyle->SetOptFit(111);
+    gStyle->SetStatFontSize(6);
 
     fun0 = new TF1("fun0","pol1(0)+gaus(2)", mFitRMin, mFitRMax);
     fun0->SetParameters(1.,1.,1.,1.84,0.01);
@@ -483,6 +490,168 @@ void FitD0Peak::fitComeOn() {
     delete c1;
     delete resGaus;
     delete resLinear;
+}
+
+//____________________________________________________________________________________________________________________________
+void FitD0Peak::fitBackground() {
+    cout<<"fitBackground()"<<endl;
+
+    TString histoName=sigOrig->GetName();
+    histoName+="_clone";
+    TH1F* histoSig=(TH1F*)sigOrig->Clone(histoName);
+//    histoSig->SetStats(0);
+
+    histoName=bckgOrig->GetName();
+    histoName+="_clone";
+    auto* histoBckg=(TH1F*)bckgOrig->Clone(histoName);
+    histoBckg->SetStats(0);
+
+    histoName+="_1";
+    auto* hint=(TH1F*)bckgOrig->Clone(histoName);
+    hint->SetStats(0);
+
+    TF1 *funLS = new TF1("funLS","pol1(0)", mFitRMin,mFitRMax);
+    funLS->SetParameters(1.,-5.);
+    funLS->SetLineStyle(1);
+    funLS->SetLineWidth(5);
+    funLS->SetParName(0,"intercept");
+    funLS->SetParName(1,"slope");
+    funLS->SetLineColor(histoBckg->GetLineColor());
+
+    histoBckg->Fit(funLS, "RLI");
+    (TVirtualFitter::GetFitter())->GetConfidenceIntervals(hint, 0.68);
+    hint->SetStats(kFALSE);
+    hint->SetFillColor(17);
+    hint->SetMarkerColor(17);
+    hint->SetMarkerStyle(1);
+    hint->SetTitle(0);
+
+    histoSig->Add(hint,-1);
+
+
+    setHistoStyle(histoSig, kGreen+2, 34);
+
+    //    TF1 *resGaus1 = new TF1("resGausFitBckg","gaus(0)",mFitRMin,mFitRMax);
+    TF1 *resGaus1 = new TF1("resGausFitBckg","gaus(0)",mFitRMin,mFitRMax);
+    resGaus1->SetLineWidth(3);
+    resGaus1->SetParameters(40, 1.864, 0.01);
+    resGaus1->SetLineColor(histoSig->GetMarkerColor());
+
+    TFitResultPtr r = histoSig->Fit(resGaus1, "RS", "", mFitRMin+0.04, mFitRMax-0.04);
+
+    TCanvas *c1 = new TCanvas("c1","c1",1200,900);
+    gPad->SetMargin(0.1,0.05,0.13,0.08);
+    gStyle->SetOptStat(0);
+    gStyle->SetStatFontSize(6);
+    gPad->SetMargin(0.1,0.05,0.13,0.08);
+//    gStyle->SetOptFit(111);
+    gStyle->SetStatX(0.949833);
+    gStyle->SetStatY(0.920598);
+
+    sigOrig->Draw();
+    gStyle->SetOptFit(111);
+
+//    TPaveStats *st = (TPaveStats*)histoBckg->FindObject("stats");
+//    st->SetX1NDC(0.7); //new x start position
+//    st->SetY1NDC(0.7); //new x end position
+//    st->SetX2NDC(0.949833); //new x start position
+//    st->SetY2NDC(0.920598); //new x end position
+
+//    hint->Draw("samee2");
+    histoBckg->Draw("same");
+    funLS->Draw("same");
+    resGaus1->Draw("same");
+    histoSig->Draw("same");
+
+    Double_t  integralMin=resGaus1->GetParameter(1)-nsigma*resGaus1->GetParameter(2);
+    Double_t  integralMax=resGaus1->GetParameter(1)+nsigma*resGaus1->GetParameter(2);
+    rawYieldFitBckg=resGaus1->Integral(integralMin,integralMax)/binSize;
+    rawYieldFitBckgError = resGaus1->IntegralError(integralMin, integralMax, r->GetParams(), r->GetCovarianceMatrix().GetMatrixArray());
+
+    Double_t BLS=funLS->Integral(integralMin, integralMax)/binSize;
+
+    Double_t signLS=abs(rawYieldFitBckg)/sqrt(abs(rawYieldFitBckg)+abs(2*BLS));
+    std::cout<<"Significance: "<<signLS<<endl;
+    Double_t SLSError=rawYieldFitBckg/signLS;
+
+    TLegend *legendPub = new TLegend(0.127,0.699, 0.29, 0.907,"","brNDC");
+    legendPub->AddEntry(sigOrig, "Unlike-sign (US) signal", "pl");
+    legendPub->AddEntry(histoBckg, "Like-sign (LS) background", "pl");
+    legendPub->AddEntry(histoBckg->GetFunction("funLS"), "Linear fit of LS", "pl");
+    legendPub->AddEntry(histoSig, "US - fitted LS", "pl");
+    legendPub->SetFillStyle(0);
+    legendPub->SetLineColor(0);
+    legendPub->SetTextSize(0.04);
+    legendPub->Draw("same");
+
+    TPaveText *textPub1 = new TPaveText(0.13,0.6,0.205,0.7,"brNDC");
+    textPub1->SetTextSize(0.04);
+    textPub1->SetLineColor(0);
+    textPub1->SetShadowColor(0);
+    textPub1->SetFillColor(0);
+    textPub1->SetTextFont(42);
+    textPub1->AddText(Form("Significance: %.2f, S/B: %.2f", signLS, rawYieldFitBckg/BLS));
+    textPub1->AddText(Form("Raw yield: %.2f #pm %.2f",     rawYieldFitBckg, rawYieldFitBckgError));
+
+    textPub1->SetTextAlign(12);
+    textPub1->Draw("same");
+
+    tx2.DrawLatex(0.1,0.940,Form("p_{T}: %3.1f-%3.1f GeV/c", ptMin, ptMax));
+    text1->Draw("same");
+
+    fOut->cd();
+    c1->Write(Form("%.1f_%.1f_fit_bckg", ptMin, ptMax));
+    c1->SaveAs(mOutputImgName+".png");
+
+
+
+    c1->Close();
+
+    /*
+
+    mMean = abs(fun0->GetParameter(3));
+    mMeanE = abs(fun0->GetParError(3));
+    mSigma = abs(fun0->GetParameter(4));
+    mSigmaE = abs(fun0->GetParError(4));
+    mHeight = abs(fun0->GetParameter(2));
+    mHeightE = abs(fun0->GetParError(2));
+
+    //Evaluation of significances and stuff:
+    //Peak range, bins
+    Int_t intLow = sigSubtractedResidualBckg->FindBin(mMean-nsigma*mSigma);
+    Int_t intUp = sigSubtractedResidualBckg->FindBin(mMean+nsigma*mSigma);
+
+    std::cout<<"Integral range: "<<intLow<<" "<<intUp<<endl;
+    std::cout<<"Integral real range from centre of bins: "<<sigSubtracted->GetBinCenter(intLow)<<" "<<sigSubtracted->GetBinCenter(intUp)<<endl;
+
+    rawYield = sigSubtractedResidualBckg->IntegralAndError(intLow, intUp, rawYieldError, "");
+
+    Double_t B = bckgAddedResidualBckg->Integral(intLow, intUp,"");
+    SoverB = rawYield/B;
+    significanceBins = rawYield/TMath::Sqrt(rawYield+2*B);
+
+    std::cout<<"raw yield with error from histo (IntegralAndError): "<<rawYield<<" "<<rawYieldError<<endl;
+    std::cout<<"S: "<<rawYield<<endl;
+    std::cout<<"B: "<<B<<endl;
+    std::cout<<"S/B: "<<SoverB<<endl;
+    std::cout<<"start fit end"<<endl;
+
+
+
+
+
+
+
+    flinLS->Draw("same");
+//    fgausLS->Draw("same");
+
+
+
+    delete c1;
+    delete resLinear;
+     */
+    cout<<"fitBackground() end"<<endl;
+
 }
 
 //____________________________________________________________________________________________________________________________

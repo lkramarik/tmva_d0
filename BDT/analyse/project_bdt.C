@@ -10,16 +10,13 @@
 #include <ctime>
 #include <cstdio>
 #include <fstream>
-#include "fitting.C"
 #include "FitD0Peak.hh"
 
 void project_bdt(Double_t ptmin = 2, Double_t ptmax = 3, Double_t nTrees = 350, Double_t maxDepth = 4) {
-//    gROOT->LoadMacro("fitting.C++");
     bool mixed=false;
     gROOT->ProcessLine(".L FitD0Peak.cpp++");
 
     TFile *f = new TFile(Form("D0_bdt_cuts_pt_%.1f_%.1f_nTrees_%.1f_maxDepth_%.1f.root", ptmin, ptmax, nTrees ,maxDepth),"RECREATE");
-//    TString input = Form("../out_local.root", ptmin, ptmax);
     TString input = "../out_local.root";
 
     const int nBdt = 70;
@@ -40,7 +37,7 @@ void project_bdt(Double_t ptmin = 2, Double_t ptmax = 3, Double_t nTrees = 350, 
 
     for (int jj = 0; jj < 2; ++jj) {
         for (int j = 0; j < n_bin; j++) {
-            his[j][jj] = new TH1F(Form("D_mass_%.4f_", bdtRange[j]) + name[jj], "D_mass;m [GeV]", 2000, 0.4, 2.4);
+            his[j][jj] = new TH1F(Form("D_mass_%.4f_", bdtRange[j]) + name[jj], "D_mass;m [GeV]", 300, 1.7, 2.);
             his[j][jj] -> Sumw2();
         }
     }
@@ -48,15 +45,17 @@ void project_bdt(Double_t ptmin = 2, Double_t ptmax = 3, Double_t nTrees = 350, 
     TFile* data = new TFile(input ,"r");
     TNtuple* ntp[2] = {(TNtuple*)data -> Get("ntp_"+name[0]), (TNtuple*)data -> Get("ntp_"+name[1])};
 
-    float D_mass, D_pt, BDTresponse;
+    float D_mass, D_pt, BDTresponse, precuts;
     for (int k = 0; k < 2; ++k) {
         ntp[k]->SetBranchAddress("D_mass", &D_mass);
         ntp[k]->SetBranchAddress("D_pt", &D_pt);
         ntp[k]->SetBranchAddress("BDTresponse", &BDTresponse);
+        ntp[k]->SetBranchAddress("precuts", &precuts);
         Long64_t nentries = ntp[k]->GetEntriesFast();
 
         for (Long64_t jentry=0; jentry<nentries; jentry++) {
             ntp[k] -> GetEntry(jentry);
+            if (precuts!=1) continue;
             for(int bin = 0; bin < n_bin; bin++) {
                 if (D_pt>ptmin && D_pt<ptmax) {
                     if (BDTresponse >= bdtRange[bin]) his[bin][k]->Fill(D_mass);
@@ -118,6 +117,7 @@ void project_bdt(Double_t ptmin = 2, Double_t ptmax = 3, Double_t nTrees = 350, 
         hisSubtr[l] = (TH1F*)his[l][0]->Clone();
         stat[l] = his[l][0] -> Integral(his[l][0] -> FindBin(1.7), his[l][0] -> FindBin(2));
         hisSubtr[l] -> Add(his[l][1], -1);
+        if (hisSubtr[l]->GetEntries()<1) continue;
         hisSubtr[l] -> Rebin(10);
         listOut -> Add(hisSubtr[l]);
         //        cout<<fit(his[l][0], his[l][1], ptmin, ptmax, false, true, "bd")<<endl;
@@ -158,7 +158,7 @@ void project_bdt(Double_t ptmin = 2, Double_t ptmax = 3, Double_t nTrees = 350, 
     gr->SetMarkerSize(2.5);
 //    TGraphErrors* gr = new TGraph(n_bin, x, y);
     gr -> Draw("ap");
-
+    cSign->SaveAs("significance.png");
 
 
     TGraphErrors* grRawYields = new TGraphErrors(n_bin, x, rawYields, 0, rawYieldsE);

@@ -6,12 +6,12 @@ import getpass
 import array
 from multiprocessing import Pool
 
-nCores = 6
+nCores = 7
 
 #############################################
 def func(input, ptmin, ptmax, weight):
 	print(input)
-	command=f"root -l -q -b \'efficiencyScripts/makeEfficiencyOneBin.cpp+(\"{str(input)}\",{ptmin},{ptmax},\"{str(weight)}\")\' "
+	command=f"root -l -q -b \'efficiencyScripts/makeEfficiencyOneBin.cpp+(\"{str(input)}\",{ptmin},{ptmax},\"{str(weight)}\",\"{str(additionalCut)}\")\' "
 	print(command)
 	os.system(command)
 	return True
@@ -45,52 +45,43 @@ def makeSetup(anaSetup):
 if __name__ == '__main__':
 	workDir = os.getcwd()
 
-	# inputFileNames=['ntp_FS_hijing_goodEvent_hotspot_1401']
-	# inputFileNames=["ntp.FS.1cm.all.newE.1509.goodPid",
-	# 				"ntp.FS.data.hft2tof2.global.3009.goodPid",
-	# 				"ntp.FS.1cm.primaries.newE.1509.goodPid",
-	# 				"ntp.FS.hft2.global.1multEdge.0810.goodPid",
-	# 				"ntp.FS.hft2.global.4multEdge.0810.goodPid",
-	# 				"ntp_FS_hijing_goodEvent_hotspot_1401.goodPid",
-	# 				"ntp_FS_hijing_goodevent_1401.goodPid"]
+	inputFileNames=['ntp_FS_data_primaries_HS_dca1_0302.goodPid_dca1',
+					'ntp_FS_data_global_HS_dca1_0302.goodPid_dca1']
+
+	# inputFileNames=["ntp_FS_hijing_goodevent_0302.pidHJD0TPC",
+	# 				"ntp_fullEvent_full_production.3M.vtx.0109.vtxMaxMult.goodevent"]
+
+	# inputFileNames=["ntp_FS_hijing_goodevent_hotspot_0302.pidHJD0TPC",
+	# 				"ntp_fullEvent_full_production.3M.vtx.0109.vtxMaxMult.goodevent.hotspot"]
 	#
-	# inputFileNames=["ntp_fullEvent_full_production.vtx.3M.1308.goodEvent",
-	# 				"ntp_fullEvent_full_production.vtx.3M.1308.goodEvent.hotspot"]
 
-	# inputFileNames=["ntp_FS_hijing_goodevent_1401.goodPid",
-	# 				"ntp_fullEvent_full_production.vtx.3M.1308.goodEvent.goodPid"]
+	additionalCut=''
+
+	# additionalCut='mcEtas>0'
 	#
-	inputFileNames=["ntp_FS_hijing_goodEvent_hotspot_1401.goodPid","ntp_fullEvent_full_production.vtx.3M.1308.goodEvent.hotspot"]
 	#
-	weight=['',
-			'']
+	weight=['weight',
+			'weight']
+	#
+	legend=['primary tracks',
+			'global tracks']
+	#
+	# #narrow bins
+	# directory = "narrowBins"
+	# ptmin=[]
+	# ptmax=[]
+	#
+	# nPtBins = 16
+	# for i in range(nPtBins):
+	# 	ptmin.append(1.+i*0.25)
+	# 	ptmax.append(1.+(i+1.)*0.25)
+	#
+	# print(ptmin)
+	# print(ptmax)
+	#
+	# makeSetup(0)
 
-	# weight=['weight',
-	# 		'weight',
-	# 		'weight',
-	# 		'weight',
-	# 		'weight',
-	# 		'',
-	# 		'']
-
-	legend=['FastSim','HIJING']
-
-	#narrow bins
-	directory = "narrowBins"
-	ptmin=[]
-	ptmax=[]
-
-	nPtBins = 16
-	for i in range(nPtBins):
-		ptmin.append(1.+i*0.25)
-		ptmax.append(1.+(i+1.)*0.25)
-
-	print(ptmin)
-	print(ptmax)
-
-	makeSetup(0)
-
-	#wide bins
+	# wide bins
 	directory = "wideBins"
 	ptmin=[1,2,3]
 	ptmax=[2,3,5]
@@ -101,7 +92,6 @@ if __name__ == '__main__':
 	print(ptmax)
 
 	makeSetup(1)
-
 
 
 # Ratio

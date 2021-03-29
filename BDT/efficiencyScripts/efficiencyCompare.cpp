@@ -27,7 +27,7 @@
 #include <fstream>
 
 void projectFilesBig(TString* inputPlot, int nInputFiles);
-void plot(TString* input, Int_t nInputFiles, TString* legendNames, TString* grNames, Int_t nGrNames);
+void plot(TString* input, Int_t nInputFiles, TString* legendNames, TString* grNames, Int_t nGrNames, TString* grNamesAxis);
 TH1F* graphToHisto(TGraphErrors *gr);
 void efficiencyCompareEfficiency();
 void efficiencyCompareResolution();
@@ -73,20 +73,22 @@ TH1F* graphToHisto(TGraphErrors *gr){
 };
 
 //__________________________________________________________________________________________________________________
-void plot(TString* input, const int nInputFiles, TString* legendNames, TString* grNames, const int nGrNames) {
+void plot(TString* input, const int nInputFiles, TString* legendNames, TString* grNames, const int nGrNames, TString* grNamesAxis) {
     cout << nInputFiles << " " << nGrNames << endl;
-    Int_t colors[] = {1, 46, 9, 8, 6, 40, 42, 28, 2};
+    Int_t colors[] = {1, 46, 9, 8, 42, 40, 42, 28, 2};
     Int_t markers[] = {25, 20, 34, 9, 40, 41, 42, 28, 2};
 
-    gSystem->Exec(Form("rm finalAnalysis/%s/final_efficiencies_SIM.root", folderDate.Data()));
-    TFile *fSimEfficiency = new TFile(Form("finalAnalysis/%s/final_efficiencies_SIM.root", folderDate.Data()), "RECREATE");
+//    gSystem->Exec(Form("rm finalAnalysis/%s/final_efficiencies_SIM.root", folderDate.Data()));
+    gSystem->Exec("rm finalAnalysis/efficiencyRatio/final_eff_ratio_SIM.root");
+    TFile *fSimEfficiency = new TFile("finalAnalysis/efficiencyRatio/final_eff_ratio_SIM.root", "RECREATE");
 
     TGraphErrors *gBackground = new TGraphErrors();
     TGraphErrors *gr = new TGraphErrors();
     std::vector < TGraphErrors * > graphsSIM[nGrNames];
 
     for (int m = 0; m < nInputFiles; ++m) {
-        TFile *fInEff = new TFile(Form("finalAnalysis/%s/%s/final_result_SIM.root", folderDate.Data(), input[m].Data()), "READ");
+        TFile *fInEff = new TFile(Form("finalAnalysis/%s/final_result_SIM.root", input[m].Data()), "READ");
+//        TFile *fInEff = new TFile(Form("finalAnalysis/%s/%s/final_result_SIM.root", folderDate.Data(), input[m].Data()), "READ");
         if (!fInEff) continue;
         for (int k = 0; k < nGrNames; ++k) {
             gr = (TGraphErrors *) fInEff->Get(grNames[k]);
@@ -95,18 +97,19 @@ void plot(TString* input, const int nInputFiles, TString* legendNames, TString* 
         fInEff->Close();
     }
 
-    TLegend *legend = new TLegend(0.136, 0.66, 0.34, 0.88);
+    TLegend *legend = new TLegend(0.175, 0.632, 0.38, 0.87);
     legend->SetFillStyle(0);
     legend->SetLineColor(0);
     legend->SetTextSize(0.04);
 
     for (int l = 0; l < nGrNames; ++l) {
-        TCanvas *out1 = new TCanvas("out1", "out1", 1200, 1000);
+        TCanvas *out1 = new TCanvas("out1", "out1", 1000, 1100);
+        gPad->SetLeftMargin(0.15);
         out1->SetLogy();
         out1->SetGrid();
         TMultiGraph *mg = new TMultiGraph();
         mg->SetMaximum(0.7);
-        mg->GetYaxis()->SetTitle("#varepsilon");
+        mg->GetYaxis()->SetTitle(grNamesAxis[l]);
         mg->GetXaxis()->SetTitle("D^{0} p_{T} (GeV/c)");
         mg->GetXaxis()->CenterTitle(kTRUE);
         mg->GetXaxis()->SetTitleSize(0.96);
@@ -114,8 +117,8 @@ void plot(TString* input, const int nInputFiles, TString* legendNames, TString* 
         mg->SetTitle("");
         for (unsigned short j = 0; j < graphsSIM[l].size(); ++j) {// nfiles
             graphsSIM[l][j]->SetMarkerColor(colors[j]);
-            graphsSIM[l][j]->SetMarkerStyle(2);
-            graphsSIM[l][j]->SetMarkerSize(1.7);
+            graphsSIM[l][j]->SetMarkerStyle(20);
+            graphsSIM[l][j]->SetMarkerSize(1.9);
             graphsSIM[l][j]->SetLineColor(colors[j]);
             graphsSIM[l][j]->SetLineWidth(2);
             graphsSIM[l][j]->SetName(Form("%i", j));
@@ -144,6 +147,7 @@ void plot(TString* input, const int nInputFiles, TString* legendNames, TString* 
         imgName += grNames[l];
         imgName += ".eps";
         out1->SaveAs(imgName);
+        out1->Close();
 
         //----------------------------------Average value error------------------------------------
         TLegend *legend2 = new TLegend(0.188377, 0.779, 0.34, 0.9186);
@@ -187,7 +191,7 @@ void plot(TString* input, const int nInputFiles, TString* legendNames, TString* 
         gBackground->SetTitle("");
         gBackground->GetYaxis()->SetRangeUser(0,0.2);
 
-        TCanvas *out2 = new TCanvas("out2", "out2", 1000, 1000);
+        TCanvas *out2 = new TCanvas("out2", "out2", 1000, 1100);
         gPad->SetLeftMargin(0.15);
         gBackground->Draw("ap");
         legend2->AddEntry(gBackground, grNames[l], "pl");
@@ -198,6 +202,7 @@ void plot(TString* input, const int nInputFiles, TString* legendNames, TString* 
         legend2->Draw("same");
 
         out2->SaveAs(imgName);
+        out2->Close();
     }
 
 
@@ -227,9 +232,9 @@ void plot(TString* input, const int nInputFiles, TString* legendNames, TString* 
         }
 
         for (int i = 0; i < nInputFiles; ++i) {
-//            if (i==baseNumberFile) continue;
-            out[i] = new TCanvas(Form("%i",i), Form("%i",i), 900, 1000);
+            out[i] = new TCanvas(Form("%i",i), Form("%i",i), 900, 1200);
             out[i]->cd();
+            out[i]->SetLeftMargin(0.15);
             ratios[i][n] = new TRatioPlot(histo[i][n], histo[baseNumberFile][n],"divsym");
 //            ratios[i][n] = new TRatioPlot(histo[i][n], histo[baseNumberFile][n]);
             ratios[i][n]->SetH1DrawOpt("E");
@@ -239,35 +244,37 @@ void plot(TString* input, const int nInputFiles, TString* legendNames, TString* 
             ratios[i][n]->SetGridlines(lines);
             ratios[i][n]->SetSeparationMargin(0.01);
             ratios[i][n]->GetUpperPad()->SetLogy();
+            ratios[i][n]->GetUpperPad()->SetGrid();
 
             ratios[i][n] -> GetLowerRefYaxis() -> CenterTitle(kTRUE);
             ratios[i][n] -> GetLowerRefXaxis() -> CenterTitle(kTRUE);
             ratios[i][n] -> GetUpperRefYaxis() -> CenterTitle(kTRUE);
-            ratios[i][n] -> GetUpperRefYaxis() -> SetRangeUser(0.7*min, 1.4*max);
+            ratios[i][n] -> GetUpperRefYaxis() -> SetRangeUser(0.7*min, 1.);
 //            ratios[i][n] -> GetUpperRefYaxis() -> SetRangeUser(0.0001, 1.2*max);
 
             ratios[i][n] -> GetLowerRefYaxis() -> SetTitle(Form("%s/%s",legendNames[i].Data(),legendNames[baseNumberFile].Data()));
+            if (i==baseNumberFile && nInputFiles>2) ratios[i][n] -> GetLowerRefYaxis() -> SetTitle(Form("Ratio to %s",legendNames[baseNumberFile].Data()));
+            if (nInputFiles==2) ratios[i][n] -> GetLowerRefYaxis() -> SetTitle(Form("%s/%s",legendNames[1].Data(),legendNames[0].Data()));
+
             ratios[i][n] -> GetLowerRefGraph() -> SetMinimum(0.001); //if this is 0.0, problems with X axis
             ratios[i][n] -> GetLowerRefGraph() -> SetMaximum(1.4);
 
 //                ratio -> GetLowerRefXaxis() -> SetTitleSize(0.04);
             ratios[i][n] -> GetLowerRefXaxis() -> SetTitleOffset(1.1);
-            ratios[i][n] -> GetUpperRefYaxis() -> SetTitle("#varepsilon");
+            ratios[i][n] -> GetUpperRefYaxis() -> SetTitle(grNamesAxis[n]);
 
-            out[i]->Update();
+//            out[i]->Update();
 
-//            ratios[i]->GetLowerPad()->SetLeftMargin(0.15);
-//            ratios[i]->GetLowerPad()->SetRightMargin(0.05);
-//            ratios[i][n]->GetUpperPad()->cd();
-//            ratios[i]->GetUpperPad()->SetLeftMargin(0.15);
-//            ratios[i]->GetUpperPad()->SetRightMargin(0.05);
-
-            legend1->Draw("same");
-            if(i!=baseNumberFile) {
-                TGraph *g = ratios[i][n]->GetLowerRefGraph();
-                fSimEfficiency->cd();
-                g->Write(Form("%s_ratio_%s_to_%s", grNames[n].Data(), input[i].Data(), input[baseNumberFile].Data()));
-            }
+            ratios[i][n]->GetLowerPad()->SetLeftMargin(0.15);
+//            ratios[i][n]->GetLowerPad()->SetRightMargin(0.05);
+            ratios[i][n]->GetUpperPad()->cd();
+            ratios[i][n]->GetUpperPad()->SetLeftMargin(0.15);
+//            ratios[i][n]->GetUpperPad()->SetRightMargin(0.05);
+            ratios[i][n]->GetUpperPad()->cd();
+            legend->Draw("same");
+            TGraph *g = ratios[i][n]->GetLowerRefGraph();
+            fSimEfficiency->cd();
+            g->Write(Form("%s_ratio_%s_to_%s", grNames[n].Data(), input[i].Data(), input[baseNumberFile].Data()));
         }
 
         for (int k = 0; k < nInputFiles; ++k) {
@@ -275,21 +282,21 @@ void plot(TString* input, const int nInputFiles, TString* legendNames, TString* 
                 TGraph *g = ratios[k][n]->GetLowerRefGraph();
                 TH1F *hUp = (TH1F *) ratios[k][n]->GetUpperRefObject();
 
-//                ratios[baseNumberFile][n]->GetLowerPad()->cd();
-//                g->GetXaxis()->SetTitle("D^{0} p_{T} (GeV/c)");
-//                g->Draw("psame");
-////            ratios[0]->GetLowerRefXaxis() -> SetTitle("D^{0} p_{T} (GeV/c)");
-//                ratios[baseNumberFile][n]->GetUpperPad()->cd();
-//                hUp->DrawCopy("same");
-//            out[0]->Update();
-                out[k]->Close();
+                ratios[baseNumberFile+1][n]->GetLowerPad()->cd();
+                g->GetXaxis()->SetTitle("D^{0} p_{T} (GeV/c)");
+                g->Draw("psame");
+
+                ratios[baseNumberFile+1][n]->GetUpperPad()->cd();
+                hUp->DrawCopy("same");
+//                out[k]->Close();
             }
         }
 
         TString nameRatio = "finalAnalysis/efficiencyRatio/ratio."+grNames[n]+".png";
-        out[baseNumberFile]->SaveAs(nameRatio);
+        out[baseNumberFile+1]->SaveAs(nameRatio);
         nameRatio = "finalAnalysis/efficiencyRatio/ratio."+grNames[n]+".eps";
-        out[baseNumberFile]->SaveAs(nameRatio);
+        out[baseNumberFile+1]->SaveAs(nameRatio);
+        out[baseNumberFile+1]->Close();
     }
 
 //    fSimEfficiency->Close();
@@ -313,13 +320,20 @@ void efficiencyCompareResolution() {
 
     TString grNames[] = {"grTpcAccHftPidPreCutsBDT", "grTpcAcc", "grTpcAccHftPid", "grTpcAccHft", "grTpcAccHftPidPreCuts"};
     const int nGrNames = sizeof(grNames) / sizeof(TString);
-
+    TString grNamesAxis[] = {"Acc+TPC+HFT+PID+BDT efficiency",
+                             "Acc+TPC efficiency",
+                             "Acc+TPC+HFT+PID efficiency",
+                             "Acc+TPC+HFT efficiency",
+                             "Acc+TPC+HFT+PID+precuts efficiency",
+                             "Acc+TPC+HFT+precuts efficiency",
+                             "Acc+TPC+HFT+BDT efficiency",
+                             "Acc efficiency"};
     TGraphErrors *gr = new TGraphErrors();
     std::vector < TGraphErrors * > graphsSIM[nGrNames];
 //    projectFilesBig(input, nInputFiles);
 //
     TString ffImg = "resolution";
-    plot(input, nInputFiles, legendNamesPlot, grNames, nGrNames);
+    plot(input, nInputFiles, legendNamesPlot, grNames, nGrNames, grNamesAxis);
     gSystem->Exec(Form("mkdir -p calculation/%s/.", ffImg.Data()));
     gSystem->Exec(Form("mv calculation/*.png calculation/%s/.", ffImg.Data()));
 
